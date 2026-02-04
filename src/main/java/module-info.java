@@ -1,7 +1,8 @@
-module br.univali.horseteoriadacomputacao {
+module teoriadacomputacao.passeiodocavalo {
     requires javafx.controls;
     requires javafx.fxml;
 
-    opens br.univali.horseteoriadacomputacao to javafx.fxml;
-    exports br.univali.horseteoriadacomputacao;
+
+    opens teoriadacomputacao.passeiodocavalo to javafx.fxml;
+    exports teoriadacomputacao.passeiodocavalo;
 }

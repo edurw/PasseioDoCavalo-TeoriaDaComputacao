@@ -1,8 +1,8 @@
-package br.univali.horseteoriadacomputacao;
+package passeiodocavalo.teoriadacomputacao;
 
 import javafx.application.Application;
 
-public class Launcher {
+public class Main {
     static void main(String[] args) {
         Application.launch(TabuleiroCavalo.class, args);
     }

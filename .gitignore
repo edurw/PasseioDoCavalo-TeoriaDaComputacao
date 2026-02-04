@@ -5,11 +5,10 @@ target/
 .kotlin
 
 ### IntelliJ IDEA ###
-.idea/
-#.idea/modules.xml
-#.idea/jarRepositories.xml
-#.idea/compiler.xml
-#.idea/libraries/
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
 *.iws
 *.iml
 *.ipr
@@ -35,7 +34,6 @@ build/
 
 ### VS Code ###
 .vscode/
-bin/
 
 ### Mac OS ###
 .DS_Store

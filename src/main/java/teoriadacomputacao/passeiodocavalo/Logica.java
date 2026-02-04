@@ -1,4 +1,4 @@
-package br.univali.horseteoriadacomputacao;
+package teoriadacomputacao.passeiodocavalo;
 
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
