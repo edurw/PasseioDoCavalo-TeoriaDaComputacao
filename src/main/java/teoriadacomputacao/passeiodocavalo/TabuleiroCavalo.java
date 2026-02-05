@@ -10,6 +10,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class TabuleiroCavalo extends Application {
+
     @Override
     public void start(Stage stage) {
 
@@ -23,6 +24,7 @@ public class TabuleiroCavalo extends Application {
         Label lblIteracoes = new Label("Iterações: 0");
         Label lblTempo = new Label("Tempo: 0 ms");
         Label lblSolucao = new Label("Solução: -");
+        Label lblVisitados = new Label("Grids Visitados: 0");
 
         // TextField para tamanho
         TextField txtTamanho = new TextField("8");
@@ -43,7 +45,19 @@ public class TabuleiroCavalo extends Application {
         btnAplicar.setMaxWidth(Double.MAX_VALUE);
         txtTamanho.setOnAction(e -> btnAplicar.fire());
 
-        // BOTÃO RESET
+        // BOTÕES
+        Button btnLivre = new Button("Modo Livre");
+        btnLivre.setMaxWidth(Double.MAX_VALUE);
+
+        Button btnForcaBruta = new Button("Força Bruta");
+        btnForcaBruta.setMaxWidth(Double.MAX_VALUE);
+
+        Button btnBuscaProfundidade = new Button("Busca Profundidade");
+        btnBuscaProfundidade.setMaxWidth(Double.MAX_VALUE);
+
+        Button btnPoda = new Button("Poda");
+        btnPoda.setMaxWidth(Double.MAX_VALUE);
+
         Button btnReset = new Button("Reset");
         btnReset.setMaxWidth(Double.MAX_VALUE);
 
@@ -56,12 +70,18 @@ public class TabuleiroCavalo extends Application {
                 lblMovimentos,
                 lblIteracoes,
                 lblTempo,
+                lblVisitados,
                 lblSolucao,
+                new Label("Algoritmos"),
+                btnLivre,
+                btnForcaBruta,
+                btnBuscaProfundidade,
+                btnPoda,
                 btnReset
         );
 
         painelLateral.setPadding(new Insets(15));
-        painelLateral.setPrefWidth(200);
+        painelLateral.setPrefWidth(160);
 
         BorderPane root = new BorderPane();
         root.setCenter(tabuleiro);
@@ -84,7 +104,8 @@ public class TabuleiroCavalo extends Application {
                 lblMovimentos,
                 lblIteracoes,
                 lblTempo,
-                lblSolucao
+                lblSolucao,
+                lblVisitados
         );
 
         // Metodo auxiliar para atualizar tamanho
@@ -137,12 +158,16 @@ public class TabuleiroCavalo extends Application {
 
             // Recria a lógica com o novo tamanho E com o tamanho visual atual
             logica[0] = new Logica(tabuleiro, novoTam, tamanhoAtual);
-            logica[0].setLabels(lblPosicao, lblMovimentos, lblIteracoes, lblTempo, lblSolucao);
+            logica[0].setLabels(lblPosicao, lblMovimentos, lblIteracoes, lblTempo, lblSolucao, lblVisitados);
 
             // Força atualização imediata
             tabuleiro.setPrefSize(tamanhoAtual, tamanhoAtual);
         });
 
+        btnLivre.setOnAction(e -> logica[0].iniciarModoLivre());
+        btnForcaBruta.setOnAction(e -> logica[0].iniciarForcaBruta());
+        btnBuscaProfundidade.setOnAction(e -> logica[0].iniciarBuscaProfundidade());
+        btnPoda.setOnAction(e -> logica[0].iniciarPoda());
         btnReset.setOnAction(e -> logica[0].reset());
 
         // Define tamanho inicial
