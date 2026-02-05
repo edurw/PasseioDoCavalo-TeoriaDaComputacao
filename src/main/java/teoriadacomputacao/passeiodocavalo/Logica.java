@@ -6,13 +6,16 @@ import javafx.scene.control.Label;
 
 public class Logica {
 
-    private static final int TAM = 8;
+    private final int TAM;
+
+    // REMOVIDO O FINAL para permitir atualização
+    private double tamanhoTabuleiro;
 
     // 0 = vazio, 1 = pode mover, 2 = cavalo
-    private final int[][] estado = new int[TAM][TAM];
+    private final int[][] estado;
 
     // referência visual
-    private final StackPane[][] casas = new StackPane[TAM][TAM];
+    private final StackPane[][] casas;
 
     // grid visual
     private final GridPane tabuleiro;
@@ -30,8 +33,6 @@ public class Logica {
     private boolean isFechada = false;
 
     private long tempoInicio = 0;
-//    private final long tempoFim = 0;
-
 
     private Label lblPosicao;
     private Label lblMovimentos;
@@ -40,18 +41,29 @@ public class Logica {
     private Label lblSolucao;
 
     // Construtor
-    public Logica(GridPane tabuleiro) {
+    public Logica(GridPane tabuleiro, int tamanho, double tamanhoVisual) {
+        this.TAM = tamanho;
         this.tabuleiro = tabuleiro;
+        this.tamanhoTabuleiro = tamanhoVisual;
+
+        this.estado = new int[TAM][TAM];
+        this.casas = new StackPane[TAM][TAM];
+
         criarTabuleiro();
     }
 
     // Criação do tabuleiro visual
     private void criarTabuleiro() {
+        tabuleiro.getChildren().clear();
+        tabuleiro.setPrefSize(tamanhoTabuleiro, tamanhoTabuleiro);
+
+        double tamanhoCasa = tamanhoTabuleiro / TAM;
+
         for (int linha = 0; linha < TAM; linha++) {
             for (int coluna = 0; coluna < TAM; coluna++) {
 
                 StackPane casa = new StackPane();
-                casa.setPrefSize(60, 60);
+                casa.setPrefSize(tamanhoCasa, tamanhoCasa);
 
                 boolean clara = (linha + coluna) % 2 == 0;
                 casa.setStyle(
@@ -82,7 +94,7 @@ public class Logica {
 
     private void colocarCavalo(int linha, int coluna) {
         limparTabuleiro();
-        tempoInicio = System.nanoTime(); // ou currentTimeMillis()
+        tempoInicio = System.nanoTime();
         estado[linha][coluna] = 2;
         cavaloLinha = linha;
         cavaloColuna = coluna;
@@ -121,6 +133,9 @@ public class Logica {
     }
 
     private void atualizarVisual() {
+        double tamanhoCasa = tamanhoTabuleiro / TAM;
+        double tamanhoCavalo = tamanhoCasa * 0.6;
+
         for (int i = 0; i < TAM; i++) {
             for (int j = 0; j < TAM; j++) {
                 StackPane casa = casas[i][j];
@@ -128,7 +143,7 @@ public class Logica {
 
                 if (estado[i][j] == 2) {
                     Label cavalo = new Label("♞");
-                    cavalo.setStyle("-fx-font-size: 40px; -fx-text-fill: black;");
+                    cavalo.setStyle("-fx-font-size: " + tamanhoCavalo + "px; -fx-text-fill: black;");
                     casa.getChildren().add(cavalo);
                 }
             }
@@ -150,7 +165,6 @@ public class Logica {
 
         atualizarMetricas();
     }
-
 
     private void atualizarMetricas() {
         if (lblPosicao != null) {
@@ -176,7 +190,9 @@ public class Logica {
         }
 
         if (lblSolucao != null) {
-            if (movimentos < 63) {
+            int movimentosParaConcluir = (TAM * TAM) - 1;
+
+            if (movimentos < movimentosParaConcluir) {
                 lblSolucao.setText("Solução: -");
             } else {
                 lblSolucao.setText(
@@ -187,7 +203,8 @@ public class Logica {
     }
 
     private void verificarSolucao() {
-        if (movimentos < 63) return;
+        int movimentosParaConcluir = (TAM * TAM) - 1;
+        if (movimentos < movimentosParaConcluir) return;
 
         isFechada = movimentoValido(
                 cavaloLinha,
@@ -207,9 +224,22 @@ public class Logica {
         cavaloLinha = -1;
         cavaloColuna = -1;
         movimentos = 0;
+        iteracoes = 0;
+        tempoInicio = 0;
+        isFechada = false;
 
         limparTabuleiro();
         atualizarVisual();
         atualizarMetricas();
+    }
+
+    public void redimensionar(double novoTamanho) {
+        this.tamanhoTabuleiro = novoTamanho;
+        criarTabuleiro(); // recria o tabuleiro com novo tamanho
+
+        // Se houver um cavalo no tabuleiro, redesenha ele
+        if (cavaloLinha != -1) {
+            atualizarVisual();
+        }
     }
 }

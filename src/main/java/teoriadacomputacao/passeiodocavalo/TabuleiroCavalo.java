@@ -3,8 +3,7 @@ package teoriadacomputacao.passeiodocavalo;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
+import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
@@ -15,32 +14,43 @@ public class TabuleiroCavalo extends Application {
     public void start(Stage stage) {
 
         GridPane tabuleiro = new GridPane();
-        tabuleiro.setPrefSize(480, 480);
 
-        // lógica
-        Logica logica = new Logica(tabuleiro);
+        int tamanho = 8;
 
-        // MÉTRICAS
+        // Labels (MÉTRICAS)
         Label lblPosicao = new Label("Posição: -");
         Label lblMovimentos = new Label("Movimentos: 0");
         Label lblIteracoes = new Label("Iterações: 0");
         Label lblTempo = new Label("Tempo: 0 ms");
         Label lblSolucao = new Label("Solução: -");
 
-        logica.setLabels(
-                lblPosicao,
-                lblMovimentos,
-                lblIteracoes,
-                lblTempo,
-                lblSolucao
-        );
+        // TextField para tamanho
+        TextField txtTamanho = new TextField("8");
+        txtTamanho.setTextFormatter(new TextFormatter<String>(change -> {
+            String novoTexto = change.getControlNewText();
+
+            // permite vazio (pra pessoa apagar e digitar de novo)
+            if (novoTexto.isEmpty()) return change;
+
+            // permite somente dígitos
+            if (novoTexto.matches("\\d+")) return change;
+
+            // bloqueia qualquer outra coisa
+            return null;
+        }));
+
+        Button btnAplicar = new Button("Aplicar tamanho");
+        btnAplicar.setMaxWidth(Double.MAX_VALUE);
+        txtTamanho.setOnAction(e -> btnAplicar.fire());
 
         // BOTÃO RESET
         Button btnReset = new Button("Reset");
         btnReset.setMaxWidth(Double.MAX_VALUE);
-        btnReset.setOnAction(e -> logica.reset());
 
         VBox painelLateral = new VBox(10,
+                new Label("Tamanho do tabuleiro (N x N)"),
+                txtTamanho,
+                btnAplicar,
                 new Label("Métricas"),
                 lblPosicao,
                 lblMovimentos,
@@ -51,13 +61,93 @@ public class TabuleiroCavalo extends Application {
         );
 
         painelLateral.setPadding(new Insets(15));
-        painelLateral.setPrefWidth(160);
+        painelLateral.setPrefWidth(200);
 
         BorderPane root = new BorderPane();
         root.setCenter(tabuleiro);
         root.setRight(painelLateral);
 
-        Scene scene = new Scene(root, 680, 520);
+        Scene scene = new Scene(root, 720, 520);
+
+        // Inicializa lógica numa "referência mutável"
+        final Logica[] logica = new Logica[1];
+
+        // Inicializa com tamanho calculado
+        double tamanhoInicial = Math.min(
+                scene.getWidth() - painelLateral.getWidth(),
+                scene.getHeight()
+        );
+
+        logica[0] = new Logica(tabuleiro, tamanho, tamanhoInicial);
+        logica[0].setLabels(
+                lblPosicao,
+                lblMovimentos,
+                lblIteracoes,
+                lblTempo,
+                lblSolucao
+        );
+
+        // Metodo auxiliar para atualizar tamanho
+        Runnable atualizarTamanho = () -> {
+            double larguraDisponivel = scene.getWidth() - painelLateral.getWidth();
+            double novoTamanho = Math.min(larguraDisponivel, scene.getHeight());
+            tabuleiro.setPrefSize(novoTamanho, novoTamanho);
+            if (logica[0] != null) {
+                logica[0].redimensionar(novoTamanho);
+            }
+        };
+
+        // VINCULA O TAMANHO DO TABULEIRO À ALTURA DA JANELA
+        scene.heightProperty().addListener((obs, oldVal, newVal) -> {
+            atualizarTamanho.run();
+        });
+
+        // VINCULA O TAMANHO DO TABULEIRO À LARGURA DISPONÍVEL
+        scene.widthProperty().addListener((obs, oldVal, newVal) -> {
+            atualizarTamanho.run();
+        });
+
+        btnAplicar.setOnAction(e -> {
+            String texto = txtTamanho.getText();
+
+            int novoTam;
+            try {
+                novoTam = Integer.parseInt(texto.trim());
+            } catch (NumberFormatException ex) {
+                Alert a = new Alert(Alert.AlertType.WARNING);
+                a.setHeaderText("Tamanho inválido");
+                a.setContentText("Digite um número inteiro (ex.: 8, 10, 12).");
+                a.showAndWait();
+                return;
+            }
+
+            int min = 4;
+            int max = 30;
+            if (novoTam < min || novoTam > max) {
+                Alert a = new Alert(Alert.AlertType.WARNING);
+                a.setHeaderText("Tamanho fora do intervalo");
+                a.setContentText("Escolha um tamanho entre " + min + " e " + max + ".");
+                a.showAndWait();
+                return;
+            }
+
+            // Calcula o tamanho atual da janela
+            double larguraDisponivel = scene.getWidth() - painelLateral.getWidth();
+            double tamanhoAtual = Math.min(larguraDisponivel, scene.getHeight());
+
+            // Recria a lógica com o novo tamanho E com o tamanho visual atual
+            logica[0] = new Logica(tabuleiro, novoTam, tamanhoAtual);
+            logica[0].setLabels(lblPosicao, lblMovimentos, lblIteracoes, lblTempo, lblSolucao);
+
+            // Força atualização imediata
+            tabuleiro.setPrefSize(tamanhoAtual, tamanhoAtual);
+        });
+
+        btnReset.setOnAction(e -> logica[0].reset());
+
+        // Define tamanho inicial
+        tabuleiro.setPrefSize(tamanhoInicial, tamanhoInicial);
+
         stage.setScene(scene);
         stage.setTitle("Passeio do Cavalo");
         stage.show();
