@@ -10,6 +10,11 @@ public class Posicao {
         this.coluna = coluna;
     }
 
+    public Posicao retornaNovaPosicao(Posicao p)
+    {
+        return new Posicao(linha + p.linha, linha + p.coluna);
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
