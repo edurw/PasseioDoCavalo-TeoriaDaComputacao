@@ -9,6 +9,16 @@ public class Logica {
     // logica dos algoritmos
     private PasseioCavalo passeio;
 
+    // pra habilitar botoes depois de finalizar/resetar
+    private Runnable onBuscaFinalizada;
+    public void setOnBuscaFinalizada(Runnable r) {
+        this.onBuscaFinalizada = r;
+    }
+    private java.util.function.Consumer<Boolean> setBotoesBuscaAtivos;
+    public void setControleBotoes(java.util.function.Consumer<Boolean> controle) {
+        this.setBotoesBuscaAtivos = controle;
+    }
+
     private final int TAM;
     private double tamanhoTabuleiro;
     // grid visual
@@ -68,38 +78,26 @@ public class Logica {
     }
 
     public void iniciarForcaBruta() {
-        resetExecucao();
-        resetTabuleiro();
         modo = Modo.FORCA_BRUTA;
     }
 
     public void iniciarPoda() {
-        resetExecucao();
-        resetTabuleiro();
         modo = Modo.PODA;
     }
 
     public void iniciarBordas() {
-        resetExecucao();
-        resetTabuleiro();
         modo = Modo.BORDAS;
     }
 
     public void iniciarCantos() {
-        resetExecucao();
-        resetTabuleiro();
         modo = Modo.CANTOS;
     }
 
     public void iniciarSegmentacao() {
-        resetExecucao();
-        resetTabuleiro();
         modo = Modo.SEGMENTOS;
     }
 
     public void iniciarConectividade() {
-        resetExecucao();
-        resetTabuleiro();
         modo = Modo.CONECTIVIDADE;
     }
 
@@ -155,6 +153,9 @@ public class Logica {
 
         if (cavaloLinha == -1) {
             iniciarPasseio(linha, coluna);
+            if (setBotoesBuscaAtivos != null) {
+                setBotoesBuscaAtivos.accept(false);
+            }
             executarBusca();
         }
     }
@@ -203,7 +204,6 @@ public class Logica {
 
                         //  potencial problema na solucao, que permite o algoritmo rodar por alguns instantes
                         if(descobertos == TAM*TAM || descobertos >= TAM*TAM){
-//                            if(descobertos >= TAM*TAM){
 
                             finalizado = true;
                             executando = false;
@@ -211,9 +211,9 @@ public class Logica {
                             // evitar race condiction
                             cancelarExecucao = true;
 
-                            // talvez melhore a execucao ao encerrar
-                            if(threadExecucao != null)
-                                threadExecucao.interrupt();
+                            if (onBuscaFinalizada != null) {
+                                javafx.application.Platform.runLater(onBuscaFinalizada);
+                            }
                         }
 
                         atualizarVisual();
@@ -383,6 +383,9 @@ public class Logica {
         iteracoes++;     // <<< jogo terminou
         finalizado = true;
         executando = false;
+        if (onBuscaFinalizada != null) {
+            javafx.application.Platform.runLater(onBuscaFinalizada);
+        }
     }
 
     private boolean movimentoValido(int l1, int c1, int l2, int c2) {
@@ -392,13 +395,18 @@ public class Logica {
     }
 
     public void reset() {
-        resetExecucao();
-        modo = Modo.NENHUM;   // reset completo
+        cancelarExecucao = true;
+        executando = false;
+        finalizado = false;
+        tempoInicio = 0;
 
         resetTabuleiro();
-
         atualizarVisual();
         atualizarMetricas();
+
+        if (onBuscaFinalizada != null) {
+            Platform.runLater(onBuscaFinalizada);
+        }
     }
 
     // reseta a execucao
@@ -409,6 +417,10 @@ public class Logica {
         finalizado = false;
         tempoInicio = 0;
         iteracoes = 0;
+
+//        if (onBuscaFinalizada != null) {
+//            javafx.application.Platform.runLater(onBuscaFinalizada);
+//        }
     }
 
     // reseta o tabuleiro
@@ -454,9 +466,10 @@ public class Logica {
             javafx.application.Platform.runLater(this::verificarSolucao);
 
             executando = false;
-            Platform.runLater(() -> {
 
-            });
+            if (onBuscaFinalizada != null) {
+                javafx.application.Platform.runLater(onBuscaFinalizada);
+            }
         });
         threadExecucao.setDaemon(true);
         threadExecucao.start();
@@ -478,6 +491,9 @@ public class Logica {
 
             executando = false;
 
+            if (onBuscaFinalizada != null) {
+                javafx.application.Platform.runLater(onBuscaFinalizada);
+            }
         });
         threadExecucao.setDaemon(true);
         threadExecucao.start();

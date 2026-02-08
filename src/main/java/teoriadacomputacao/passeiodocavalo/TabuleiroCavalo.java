@@ -100,6 +100,10 @@ public class TabuleiroCavalo extends Application {
 
         Scene scene = new Scene(root, 720, 520);
 
+        // runnable para ativar botoes ao finalizar/resetar
+        Runnable habilitarBotoesBusca = () -> setBotoesBuscaAtivos(true, btnForcaBruta, btnPoda, btnPodaBordas,
+                btnPodaCantos, btnSegmentacao, btnConectividade);
+
         // Inicializa lógica numa "referência mutável"
         final Logica[] logica = new Logica[1];
 
@@ -119,6 +123,11 @@ public class TabuleiroCavalo extends Application {
                 lblSolucao,
                 lblDescobertos
         );
+        logica[0].setControleBotoes(ativo -> setBotoesBuscaAtivos(ativo,
+                btnForcaBruta, btnPoda, btnPodaBordas,
+                btnPodaCantos, btnSegmentacao, btnConectividade));
+        // passando pra logica o runnable
+        logica[0].setOnBuscaFinalizada(habilitarBotoesBusca);
 
         // Metodo auxiliar para atualizar tamanho
         Runnable atualizarTamanho = () -> {
@@ -181,43 +190,37 @@ public class TabuleiroCavalo extends Application {
             if(logica[0].isExecutando()) return; // previne nova busca
             logica[0].iniciarForcaBruta();
 
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
-                    btnPodaCantos, btnSegmentacao, btnConectividade);
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
         btnPoda.setOnAction(e -> {
             if(logica[0].isExecutando()) return; // previne nova busca
             logica[0].iniciarPoda();
 
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
-                    btnPodaCantos, btnSegmentacao, btnConectividade);
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
         btnPodaBordas.setOnAction(e -> {
             if(logica[0].isExecutando()) return; // previne nova busca
             logica[0].iniciarBordas();
 
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
-                    btnPodaCantos, btnSegmentacao, btnConectividade);
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
         btnPodaCantos.setOnAction(e -> {
             if(logica[0].isExecutando()) return; // previne nova busca
             logica[0].iniciarCantos();
 
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
-                    btnPodaCantos, btnSegmentacao, btnConectividade);
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
         btnSegmentacao.setOnAction(e -> {
             if(logica[0].isExecutando()) return; // previne nova busca
             logica[0].iniciarSegmentacao();
 
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
-                    btnPodaCantos, btnSegmentacao, btnConectividade);
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
         btnConectividade.setOnAction(e -> {
             if(logica[0].isExecutando()) return; // previne nova busca
             logica[0].iniciarConectividade();
 
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
-                    btnPodaCantos, btnSegmentacao, btnConectividade);
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
         btnReset.setOnAction(e -> logica[0].reset());
 
