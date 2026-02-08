@@ -4,58 +4,18 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.control.Label;
 
-import static java.lang.Thread.sleep;
-
 public class Logica {
+    // logica dos algoritmos
+    private PasseioCavalo passeio;
 
     private final int TAM;
-
     private double tamanhoTabuleiro;
-
-    private final int[][] estado;
-
+    // grid visual
+    private final GridPane tabuleiro;
     // referência visual
     private final StackPane[][] casas;
 
-    // grid visual
-    private final GridPane tabuleiro;
-
-    // modo do algoritmo
-    public enum Modo {
-        NENHUM,
-        LIVRE,
-        FORCA_BRUTA,
-        BUSCA_PROFUNDIDADE,
-        PODA
-    }
-
-    public void iniciarModoLivre() {
-        resetExecucao();
-        resetTabuleiro();
-        modo = Modo.LIVRE;
-    }
-
-    public void iniciarForcaBruta() {
-        resetExecucao();
-        resetTabuleiro();
-        modo = Modo.FORCA_BRUTA;
-    }
-
-    public void iniciarBuscaProfundidade() {
-        resetExecucao();
-        resetTabuleiro();
-        modo = Modo.BUSCA_PROFUNDIDADE;
-    }
-
-    public void iniciarPoda() {
-        resetExecucao();
-        resetTabuleiro();
-        modo = Modo.PODA;
-    }
-
-
-    private Modo modo = Modo.NENHUM;
-
+    private final int[][] estado;
 
     // posição atual do cavalo
     private int cavaloLinha = -1;
@@ -68,28 +28,51 @@ public class Logica {
     };
 
     // contagem de movimentos
-    private int movimentos = 0;
+    private int movimentosTotais = 0;
+    private int movimentosAtuais = 0;
     private int iteracoes = 0;
+    private int descobertos = 0;
 
     private int inicioLinha = -1;
     private int inicioColuna = -1;
     private boolean isFechada = false;
-
     private long tempoInicio = 0;
 //    private final long tempoFim = 0;
-
-    private int visitados = 0;
 
     private boolean executando = false;
     private boolean cancelarExecucao = false;
     private boolean finalizado = false;
+    private Thread threadExecucao;
 
     private Label lblPosicao;
-    private Label lblMovimentos;
+    private Label lblMovimentosTotais;
+    private Label lblMovimentosAtuais;
     private Label lblIteracoes;
     private Label lblTempo;
     private Label lblSolucao;
-    private Label lblVisitados;
+    private Label lblDescobertos;
+
+    // modo do algoritmo
+    public enum Modo {
+        NENHUM,
+        FORCA_BRUTA,
+        PODA
+    }
+
+    public void iniciarForcaBruta() {
+        resetExecucao();
+        resetTabuleiro();
+        modo = Modo.FORCA_BRUTA;
+    }
+
+    public void iniciarPoda() {
+        resetExecucao();
+        resetTabuleiro();
+        modo = Modo.PODA;
+    }
+
+
+    private Modo modo = Modo.NENHUM;
 
     // Construtor
     public Logica(GridPane tabuleiro, int tamanho, double tamanhoVisual) {
@@ -141,19 +124,12 @@ public class Logica {
         if (cavaloLinha == -1) {
             iniciarPasseio(linha, coluna);
 
-            if (modo == Modo.BUSCA_PROFUNDIDADE) {
-                executarBuscaProfundidade();
-            }
-
             if (modo == Modo.FORCA_BRUTA) {
                 executarForcaBruta();
             }
-            return;
-        }
-
-        if (modo == Modo.LIVRE) {
-            if (!movimentoValido(cavaloLinha, cavaloColuna, linha, coluna)) return;
-            moverCavalo(linha, coluna);
+            else if (modo == Modo.PODA) {
+                executarPoda();
+            }
         }
     }
 
@@ -162,31 +138,77 @@ public class Logica {
         resetExecucao();
         resetTabuleiro();
 
+        passeio = new PasseioCavalo(
+                TAM,
+                new Posicao(linha, coluna),
+                modo == Modo.PODA,
+                (pos, desfazendo) -> {
+
+                    if(cancelarExecucao || finalizado) return; // caso resete, cancele o jogo
+
+                    try { Thread.sleep(5); } catch (Exception ignored) {}
+
+                    javafx.application.Platform.runLater(() -> {
+
+                        if(cancelarExecucao) return;
+
+                        if (desfazendo) { // se esta efetuando backtracking
+                            estado[pos.linha][pos.coluna] = 0;
+
+                            movimentosAtuais--; // profundidade diminui
+                            descobertos--; // diminuir descobertos, pq esta voltando, entao nao esta mais descoberto
+                            iteracoes++; // aqui aumenta iteracao, indicando que precisou fazer uma revisao nos movimentos
+                        } else {
+                            movimentosTotais++;
+                            movimentosAtuais++;
+
+                            if(estado[pos.linha][pos.coluna] == 0)
+                                descobertos++;
+
+                            // aparentemente aqui tem um erro, usar movimentos e nao descobertos
+                            estado[pos.linha][pos.coluna] = movimentosAtuais;
+//                            estado[pos.linha][pos.coluna] = descobertos;
+
+                            cavaloLinha = pos.linha;
+                            cavaloColuna = pos.coluna;
+                        }
+
+                        //  potencial problema na solucao, que permite o algoritmo rodar por alguns instantes
+                        if(descobertos == TAM*TAM || descobertos >= TAM*TAM){
+//                            if(descobertos >= TAM*TAM){
+
+                            finalizado = true;
+                            executando = false;
+
+                            // evitar race condiction
+                            cancelarExecucao = true;
+
+                            // talvez melhore a execucao ao encerrar
+                            if(threadExecucao != null)
+                                threadExecucao.interrupt();
+                        }
+
+                        atualizarVisual();
+                        atualizarMetricas();
+                    });
+                }
+
+        );
+
         tempoInicio = System.nanoTime();
         cavaloLinha = linha;
         cavaloColuna = coluna;
         inicioLinha = linha;
         inicioColuna = coluna;
 
-        movimentos = 1;
-        estado[linha][coluna] = movimentos;
-        visitados = 1;
+//        movimentos = 1;
+//        estado[linha][coluna] = movimentos;
+        movimentosTotais = 1;
+        movimentosAtuais = 1;
+        estado[linha][coluna] = movimentosAtuais;
 
-        atualizarVisual();
-        atualizarMetricas();
-    }
+        descobertos = 1;
 
-    private void colocarCavalo(int linha, int coluna) {
-        limparTabuleiro();
-        tempoInicio = System.nanoTime();
-        estado[linha][coluna] = 2;
-        cavaloLinha = linha;
-        cavaloColuna = coluna;
-
-        inicioLinha = linha;
-        inicioColuna = coluna;
-
-        movimentos = 0;
         atualizarVisual();
         atualizarMetricas();
     }
@@ -197,14 +219,17 @@ public class Logica {
     }
 
     private void moverCavalo(int linha, int coluna) {
-        movimentos++; // qualquer movimento conta
+        movimentosTotais++;
+        movimentosAtuais++;
+//        movimentos++; // qualquer movimento conta
 
         // se ainda não visitado
         if (estado[linha][coluna] == 0) {
-            visitados++;
+            descobertos++;
         }
 
-        estado[linha][coluna] = movimentos;
+        estado[linha][coluna] = movimentosAtuais;
+//        estado[linha][coluna] = movimentos;
 
         cavaloLinha = linha;
         cavaloColuna = coluna;
@@ -276,18 +301,20 @@ public class Logica {
 
     public void setLabels(
             Label posicao,
-            Label movimentos,
+            Label movimentosTotais,
+            Label movimentosAtuais,
             Label iteracoes,
             Label tempo,
             Label solucao,
-            Label visitados
+            Label descobertos
     ) {
         this.lblPosicao = posicao;
-        this.lblMovimentos = movimentos;
+        this.lblMovimentosTotais = movimentosTotais;
+        this.lblMovimentosAtuais = movimentosAtuais;
         this.lblIteracoes = iteracoes;
         this.lblTempo = tempo;
         this.lblSolucao = solucao;
-        this.lblVisitados = visitados;
+        this.lblDescobertos = descobertos;
 
         atualizarMetricas();
     }
@@ -300,8 +327,12 @@ public class Logica {
                 lblPosicao.setText("Posição: (" + cavaloLinha + ", " + cavaloColuna + ")");
         }
 
-        if (lblMovimentos != null)
-            lblMovimentos.setText("Movimentos: " + movimentos);
+        if (lblMovimentosTotais != null)
+            lblMovimentosTotais.setText("Total: " + movimentosTotais);
+
+        if (lblMovimentosAtuais != null)
+            lblMovimentosAtuais.setText("Atual: " + movimentosAtuais);
+
 
         if (lblTempo != null)
             lblTempo.setText("Tempo: " + getTempoDecorridoMs() + " ms");
@@ -309,13 +340,13 @@ public class Logica {
         if (lblIteracoes != null)
             lblIteracoes.setText("Iterações: " + iteracoes);
 
-        if (lblVisitados != null)
-            lblVisitados.setText("Grids Visitados: " + visitados);
+        if (lblDescobertos != null)
+            lblDescobertos.setText("Grids Descobertos: " + descobertos);
 
         if (lblSolucao != null) {
             int movimentosParaConcluir = (TAM * TAM) - 1;
 
-            if (visitados < movimentosParaConcluir) {
+            if (descobertos < movimentosParaConcluir) {
                 lblSolucao.setText("Solução: -");
             } else {
                 lblSolucao.setText(
@@ -327,7 +358,7 @@ public class Logica {
 
     private void verificarSolucao() {
         int movimentosParaConcluir = (TAM * TAM) - 1;
-        if (visitados < movimentosParaConcluir) return;
+        if (descobertos < movimentosParaConcluir) return;
 
         isFechada = movimentoValido(
                 cavaloLinha,
@@ -360,6 +391,12 @@ public class Logica {
     // reseta a execucao
     private void resetExecucao() {
         cancelarExecucao = true;
+
+        if(threadExecucao != null && threadExecucao.isAlive()){
+            threadExecucao.interrupt();
+            threadExecucao = null;
+        }
+
         executando = false;
         finalizado = false;
 
@@ -376,8 +413,9 @@ public class Logica {
         inicioLinha = -1;
         inicioColuna = -1;
 
-        movimentos = 0;
-        visitados = 0;
+        movimentosTotais = 0;
+        movimentosAtuais = 0;
+        descobertos = 0;
         isFechada = false;
 
         limparTabuleiro();
@@ -395,146 +433,44 @@ public class Logica {
 
     /// algoritmos
 
-    /// helpers
-    // helper pra esperar um tempinho
-    private void sleep() {
-        try { Thread.sleep(1); }
-        catch (Exception ignored) {}
-    }
-    // backtracking
-    private void desfazerMovimento(int linhaAnterior, int colunaAnterior,
-                                   int linhaAtual, int colunaAtual) {
-
-        estado[linhaAtual][colunaAtual] = 0;
-
-        visitados--;
-        movimentos--;
-
-        cavaloLinha = linhaAnterior;
-        cavaloColuna = colunaAnterior;
-    }
-
-    // para evitar race condition com javafx
-    private void moverLogico(int linha, int coluna) {
-
-        movimentos++;
-
-        if (estado[linha][coluna] == 0)
-            visitados++;
-
-        estado[linha][coluna] = movimentos;
-
-        cavaloLinha = linha;
-        cavaloColuna = coluna;
-    }
-
     /// FORCA BRUTA
     private void executarForcaBruta() {
 
         executando = true;
         cancelarExecucao = false;
 
-        new Thread(() -> {
+        threadExecucao = new Thread(() -> {
 
-            java.util.Random rnd = new java.util.Random();
+            boolean encontrou = passeio.executaPasseio();
 
-            while (visitados < TAM*TAM && !cancelarExecucao) {
-
-                java.util.List<int[]> validos = new java.util.ArrayList<>();
-
-                for (int[] m : MOVIMENTOS) {
-                    int nl = cavaloLinha + m[0];
-                    int nc = cavaloColuna + m[1];
-
-                    if (dentro(nl,nc) && estado[nl][nc] == 0)
-                        validos.add(new int[]{nl,nc});
-                }
-
-                // travou → acabou tentativa
-                if (validos.isEmpty()) {
-                    finalizado = true;
-                    executando = false;
-                    return;
-                }
-
-                int[] prox = validos.get(rnd.nextInt(validos.size()));
-
-                moverLogico(prox[0], prox[1]);
-
-                javafx.application.Platform.runLater(() -> {
-                    atualizarVisual();
-                    atualizarMetricas();
-                });
-
-                sleep();
-            }
+            isFechada = passeio.IsFechado;
 
             javafx.application.Platform.runLater(this::verificarSolucao);
 
             executando = false;
 
-        }).start();
+        });
+        threadExecucao.start();
     }
 
-    /// DFS
-    private void executarBuscaProfundidade() {
+    /// PODA (NAO USAR Warnsdorff)
+    private void executarPoda() {
 
         executando = true;
         cancelarExecucao = false;
-        new Thread(() -> {
-            dfs(cavaloLinha, cavaloColuna);
-            executando = false;
-            cancelarExecucao = true;
-        }).start();
-    }
 
-    private boolean dfs(int linha, int coluna) {
+        threadExecucao = new Thread(() -> {
 
-        if (cancelarExecucao || finalizado)
-            return true;
+            boolean encontrou = passeio.executaPasseio();
 
-        if (visitados == TAM*TAM) {
-            finalizado = true;
+            isFechada = passeio.IsFechado;
 
             javafx.application.Platform.runLater(this::verificarSolucao);
-            return true;
-        }
 
-        for (int[] m : MOVIMENTOS) {
+            executando = false;
 
-            if (finalizado) return true;
-
-            int nl = linha + m[0];
-            int nc = coluna + m[1];
-
-            if (!dentro(nl,nc) || estado[nl][nc] != 0)
-                continue;
-
-            moverLogico(nl,nc);
-
-            javafx.application.Platform.runLater(() -> {
-                atualizarVisual();
-                atualizarMetricas();
-            });
-
-            sleep();
-
-            if (dfs(nl,nc))
-                return true;
-
-            if (finalizado) return true;
-
-            // BACKTRACK
-            desfazerMovimento(linha, coluna, nl, nc);
-
-            javafx.application.Platform.runLater(() -> {
-                atualizarVisual();
-                atualizarMetricas();
-            });
-
-            sleep();
-        }
-
-        return false;
+        });
+        threadExecucao.start();
     }
+
 }

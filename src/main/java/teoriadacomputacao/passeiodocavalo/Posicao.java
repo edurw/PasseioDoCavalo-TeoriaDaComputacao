@@ -12,7 +12,7 @@ public class Posicao {
 
     public Posicao retornaNovaPosicao(Posicao p)
     {
-        return new Posicao(linha + p.linha, linha + p.coluna);
+        return new Posicao(linha + p.linha, coluna + p.coluna);
     }
 
     @Override

@@ -9,6 +9,8 @@ import java.util.List;
 
 public class PasseioCavalo {
 
+    private final MovimentoListener listener;
+
     public boolean IsFechado = false;
     public int Passos = 0;
 
@@ -29,12 +31,19 @@ public class PasseioCavalo {
                     new Posicao(-2, -1), // cima-esquerda
             } ;
 
-    public PasseioCavalo(int tamanho, Posicao posicaoInicial, boolean otimizar) {
+    public PasseioCavalo(int tamanho, Posicao posicaoInicial, boolean otimizar, MovimentoListener listener) {
         this.tamanhoTabuleiro = tamanho;
         this.tabuleiro = new boolean[tamanho][tamanho];
         this.pilhaCaminho = new ArrayDeque<Posicao>();
         this.pilhaCaminho.add(posicaoInicial);
         this.otimizado = otimizar;
+        this.listener = listener;
+
+        tabuleiro[posicaoInicial.linha][posicaoInicial.coluna] = true;
+        Passos = 1;
+
+        if(listener != null)
+            listener.aoMover(posicaoInicial, false);
     }
 
     public boolean executaPasseio(){
@@ -72,7 +81,7 @@ public class PasseioCavalo {
     private boolean verificaFinal()
     {
         if(pilhaCaminho.size() == tamanhoTabuleiro * tamanhoTabuleiro){
-
+            verificaFechado();
             return true;
         }
         return false;
@@ -98,12 +107,19 @@ public class PasseioCavalo {
         pilhaCaminho.push(p);
         Passos++;
         tabuleiro[p.linha][p.coluna] = true;
+
+        if(listener != null)
+            listener.aoMover(p, false);
     }
 
     // Desfaz movimento do cavalo
     public Posicao popMovimento(){
         Posicao p = pilhaCaminho.pop();
         tabuleiro[p.linha][p.coluna] = false;
+
+        if(listener != null)
+            listener.aoMover(p, true);
+
         return pilhaCaminho.peek();
     }
 
@@ -125,6 +141,10 @@ public class PasseioCavalo {
         }
 
         return jogadas;
+    }
+
+    public interface MovimentoListener {
+        void aoMover(Posicao posicao, boolean desfazendo);
     }
 
 }
