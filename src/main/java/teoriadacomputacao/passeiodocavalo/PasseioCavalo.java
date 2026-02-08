@@ -14,7 +14,13 @@ public class PasseioCavalo {
     public boolean IsFechado = false;
     public int Passos = 0;
 
-    private boolean otimizado;
+//    private boolean otimizado;
+    private boolean usarWarnsdorff;
+    private boolean usarPrioridadeBordas;
+    private boolean priorizarCantos;
+    private boolean usarConectividade;
+    private boolean usarSubdivisao;
+
     private int tamanhoTabuleiro = 8;
     private boolean[][] tabuleiro = new boolean[8][8];
     private ArrayDeque<Posicao> pilhaCaminho = new ArrayDeque<Posicao>();
@@ -31,12 +37,13 @@ public class PasseioCavalo {
                     new Posicao(-2, -1), // cima-esquerda
             } ;
 
-    public PasseioCavalo(int tamanho, Posicao posicaoInicial, boolean otimizar, MovimentoListener listener) {
+    public PasseioCavalo(int tamanho, Posicao posicaoInicial, boolean usarWarnsdorff, boolean usarPrioridadeBordas, MovimentoListener listener) {
         this.tamanhoTabuleiro = tamanho;
         this.tabuleiro = new boolean[tamanho][tamanho];
         this.pilhaCaminho = new ArrayDeque<Posicao>();
         this.pilhaCaminho.add(posicaoInicial);
-        this.otimizado = otimizar;
+        this.usarWarnsdorff = usarWarnsdorff;
+        this.usarPrioridadeBordas = usarPrioridadeBordas;
         this.listener = listener;
 
         tabuleiro[posicaoInicial.linha][posicaoInicial.coluna] = true;
@@ -45,6 +52,9 @@ public class PasseioCavalo {
         if(listener != null)
             listener.aoMover(posicaoInicial, false);
     }
+    public void setPriorizarCantos(boolean v){ this.priorizarCantos = v; }
+    public void setUsarConectividade(boolean v){ this.usarConectividade = v; }
+    public void setUsarSubdivisao(boolean v){ this.usarSubdivisao = v; }
 
     public boolean executaPasseio(){
 
@@ -58,12 +68,40 @@ public class PasseioCavalo {
                 proximasPosicoes.add(p);
         }
 
-        if (otimizado)
-            proximasPosicoes.sort(Comparator.comparingInt(this::contaJogadasPossiveis));
+        Comparator<Posicao> comparator = null;
+
+        if (usarWarnsdorff)
+            comparator = Comparator.comparingInt(this::contaJogadasPossiveis);
+
+        if (usarPrioridadeBordas)
+            comparator = (comparator == null)
+                    ? Comparator.comparingInt(this::distanciaBorda)
+                    : comparator.thenComparingInt(this::distanciaBorda);
+
+        if (priorizarCantos)
+            comparator = (comparator == null)
+                    ? Comparator.comparingInt(this::distanciaCanto)
+                    : comparator.thenComparingInt(this::distanciaCanto);
+
+        if (usarSubdivisao) {
+            int quadranteAtual = quadrante(posicaoAtual);
+
+            Comparator<Posicao> qComp =
+                    Comparator.comparingInt(p -> quadrante(p) == quadranteAtual ? 0 : 1);
+
+            comparator = (comparator == null) ? qComp : comparator.thenComparing(qComp);
+        }
+
+        if (comparator != null)
+            proximasPosicoes.sort(comparator);
+
 
         for(Posicao novaPosicao : proximasPosicoes){
             if(posicaoValida(novaPosicao))
             {
+                if(usarConectividade && criaIsolamento(novaPosicao))
+                    continue;
+
                 pushMovimento(novaPosicao);
 
                 if(verificaFinal()) return true; // Condição de quebra
@@ -145,6 +183,56 @@ public class PasseioCavalo {
 
     public interface MovimentoListener {
         void aoMover(Posicao posicao, boolean desfazendo);
+    }
+
+    private int distanciaBorda(Posicao p) {
+        int dLinha = Math.min(p.linha, tamanhoTabuleiro - 1 - p.linha);
+        int dColuna = Math.min(p.coluna, tamanhoTabuleiro - 1 - p.coluna);
+        return Math.min(dLinha, dColuna);
+    }
+
+    private int distanciaCanto(Posicao p){
+        int d1 = p.linha + p.coluna;
+        int d2 = p.linha + (tamanhoTabuleiro-1 - p.coluna);
+        int d3 = (tamanhoTabuleiro-1 - p.linha) + p.coluna;
+        int d4 = (tamanhoTabuleiro-1 - p.linha) + (tamanhoTabuleiro-1 - p.coluna);
+
+        return Math.min(Math.min(d1,d2), Math.min(d3,d4));
+    }
+
+    private int quadrante(Posicao p){
+        int metade = tamanhoTabuleiro/2;
+        int qLinha = p.linha < metade ? 0 : 1;
+        int qCol = p.coluna < metade ? 0 : 1;
+        return qLinha*2 + qCol;
+    }
+
+    private boolean criaIsolamento(Posicao p){
+
+        tabuleiro[p.linha][p.coluna] = true;
+
+        for(int i=0;i<tamanhoTabuleiro;i++){
+            for(int j=0;j<tamanhoTabuleiro;j++){
+                if(!tabuleiro[i][j]){
+
+                    int saidas = 0;
+
+                    for(Posicao m: movimentos){
+                        Posicao n = new Posicao(i+m.linha, j+m.coluna);
+                        if(posicaoValida(n))
+                            saidas++;
+                    }
+
+                    if(saidas==0){
+                        tabuleiro[p.linha][p.coluna] = false;
+                        return true;
+                    }
+                }
+            }
+        }
+
+        tabuleiro[p.linha][p.coluna] = false;
+        return false;
     }
 
 }

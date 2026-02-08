@@ -1,5 +1,6 @@
 package teoriadacomputacao.passeiodocavalo;
 
+import javafx.application.Platform;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.control.Label;
@@ -39,10 +40,13 @@ public class Logica {
     private long tempoInicio = 0;
 //    private final long tempoFim = 0;
 
-    private boolean executando = false;
     private boolean cancelarExecucao = false;
     private boolean finalizado = false;
     private Thread threadExecucao;
+    private boolean executando = false;
+    public boolean isExecutando() {
+        return executando;
+    }
 
     private Label lblPosicao;
     private Label lblMovimentosTotais;
@@ -54,9 +58,13 @@ public class Logica {
 
     // modo do algoritmo
     public enum Modo {
-        NENHUM,
-        FORCA_BRUTA,
-        PODA
+        NENHUM, // nenhum algoritmo
+        FORCA_BRUTA, // Busca em profundidade sem heurísticas (testa todas as possibilidades)
+        PODA, // Busca com heurística de otimização (ex.: ordenação estratégica dos movimentos)
+        BORDAS, // Busca priorizando posições próximas às bordas do tabuleiro
+        CANTOS,
+        SEGMENTOS,
+        CONECTIVIDADE
     }
 
     public void iniciarForcaBruta() {
@@ -69,6 +77,30 @@ public class Logica {
         resetExecucao();
         resetTabuleiro();
         modo = Modo.PODA;
+    }
+
+    public void iniciarBordas() {
+        resetExecucao();
+        resetTabuleiro();
+        modo = Modo.BORDAS;
+    }
+
+    public void iniciarCantos() {
+        resetExecucao();
+        resetTabuleiro();
+        modo = Modo.CANTOS;
+    }
+
+    public void iniciarSegmentacao() {
+        resetExecucao();
+        resetTabuleiro();
+        modo = Modo.SEGMENTOS;
+    }
+
+    public void iniciarConectividade() {
+        resetExecucao();
+        resetTabuleiro();
+        modo = Modo.CONECTIVIDADE;
     }
 
 
@@ -123,13 +155,7 @@ public class Logica {
 
         if (cavaloLinha == -1) {
             iniciarPasseio(linha, coluna);
-
-            if (modo == Modo.FORCA_BRUTA) {
-                executarForcaBruta();
-            }
-            else if (modo == Modo.PODA) {
-                executarPoda();
-            }
+            executarBusca();
         }
     }
 
@@ -142,6 +168,8 @@ public class Logica {
                 TAM,
                 new Posicao(linha, coluna),
                 modo == Modo.PODA,
+                modo == Modo.BORDAS,
+
                 (pos, desfazendo) -> {
 
                     if(cancelarExecucao || finalizado) return; // caso resete, cancele o jogo
@@ -195,14 +223,16 @@ public class Logica {
 
         );
 
+        passeio.setPriorizarCantos(modo == Modo.CANTOS);
+        passeio.setUsarSubdivisao(modo == Modo.SEGMENTOS);
+        passeio.setUsarConectividade(modo == Modo.CONECTIVIDADE);
+
         tempoInicio = System.nanoTime();
         cavaloLinha = linha;
         cavaloColuna = coluna;
         inicioLinha = linha;
         inicioColuna = coluna;
 
-//        movimentos = 1;
-//        estado[linha][coluna] = movimentos;
         movimentosTotais = 1;
         movimentosAtuais = 1;
         estado[linha][coluna] = movimentosAtuais;
@@ -216,27 +246,6 @@ public class Logica {
     private long getTempoDecorridoMs() {
         if (tempoInicio == 0) return 0;
         return (System.nanoTime() - tempoInicio) / 1_000_000;
-    }
-
-    private void moverCavalo(int linha, int coluna) {
-        movimentosTotais++;
-        movimentosAtuais++;
-//        movimentos++; // qualquer movimento conta
-
-        // se ainda não visitado
-        if (estado[linha][coluna] == 0) {
-            descobertos++;
-        }
-
-        estado[linha][coluna] = movimentosAtuais;
-//        estado[linha][coluna] = movimentos;
-
-        cavaloLinha = linha;
-        cavaloColuna = coluna;
-
-        verificarSolucao();
-        atualizarVisual();
-        atualizarMetricas();
     }
 
     private void limparTabuleiro() {
@@ -257,9 +266,14 @@ public class Logica {
                 casa.getChildren().clear();
 
                 boolean clara = (i + j) % 2 == 0;
+
+                String corBase = clara ? "#f0d9b5" : "#b58863";
+                String corVisitada = clara ? "#cfe8ff" : "#7fa7d9";
+
+                String corFinal = (estado[i][j] > 0) ? corVisitada : corBase;
+
                 casa.setStyle(
-                        "-fx-background-color: " +
-                                (clara ? "#f0d9b5" : "#b58863") +
+                        "-fx-background-color: " + corFinal +
                                 "; -fx-border-color: black;"
                 );
 
@@ -333,7 +347,6 @@ public class Logica {
         if (lblMovimentosAtuais != null)
             lblMovimentosAtuais.setText("Atual: " + movimentosAtuais);
 
-
         if (lblTempo != null)
             lblTempo.setText("Tempo: " + getTempoDecorridoMs() + " ms");
 
@@ -392,14 +405,8 @@ public class Logica {
     private void resetExecucao() {
         cancelarExecucao = true;
 
-        if(threadExecucao != null && threadExecucao.isAlive()){
-            threadExecucao.interrupt();
-            threadExecucao = null;
-        }
-
         executando = false;
         finalizado = false;
-
         tempoInicio = 0;
         iteracoes = 0;
     }
@@ -432,9 +439,8 @@ public class Logica {
     }
 
     /// algoritmos
-
-    /// FORCA BRUTA
-    private void executarForcaBruta() {
+    private void executarBusca() {
+//        private void executarForcaBruta() {
 
         executando = true;
         cancelarExecucao = false;
@@ -448,12 +454,15 @@ public class Logica {
             javafx.application.Platform.runLater(this::verificarSolucao);
 
             executando = false;
+            Platform.runLater(() -> {
 
+            });
         });
+        threadExecucao.setDaemon(true);
         threadExecucao.start();
     }
 
-    /// PODA (NAO USAR Warnsdorff)
+    /// PODA
     private void executarPoda() {
 
         executando = true;
@@ -470,6 +479,7 @@ public class Logica {
             executando = false;
 
         });
+        threadExecucao.setDaemon(true);
         threadExecucao.start();
     }
 

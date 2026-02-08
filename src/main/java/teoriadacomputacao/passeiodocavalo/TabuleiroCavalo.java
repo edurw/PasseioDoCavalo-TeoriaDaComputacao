@@ -50,8 +50,20 @@ public class TabuleiroCavalo extends Application {
         Button btnForcaBruta = new Button("Força Bruta");
         btnForcaBruta.setMaxWidth(Double.MAX_VALUE);
 
-        Button btnPoda = new Button("Poda");
+        Button btnPoda = new Button("Menos movimentos Futuros");
         btnPoda.setMaxWidth(Double.MAX_VALUE);
+
+        Button btnPodaBordas = new Button("Focar nas Bordas");
+        btnPodaBordas.setMaxWidth(Double.MAX_VALUE);
+
+        Button btnPodaCantos = new Button("Focar nos Cantos");
+        btnPodaCantos.setMaxWidth(Double.MAX_VALUE);
+
+        Button btnSegmentacao = new Button("Segmentar Secções");
+        btnSegmentacao.setMaxWidth(Double.MAX_VALUE);
+
+        Button btnConectividade = new Button("Evitar Casas Sozinhas");
+        btnConectividade.setMaxWidth(Double.MAX_VALUE);
 
         Button btnReset = new Button("Reset");
         btnReset.setMaxWidth(Double.MAX_VALUE);
@@ -72,6 +84,10 @@ public class TabuleiroCavalo extends Application {
                 new Label("Algoritmos:"),
                 btnForcaBruta,
                 btnPoda,
+                btnPodaBordas,
+                btnPodaCantos,
+                btnSegmentacao,
+                btnConectividade,
                 btnReset
         );
 
@@ -160,8 +176,49 @@ public class TabuleiroCavalo extends Application {
             tabuleiro.setPrefSize(tamanhoAtual, tamanhoAtual);
         });
 
-        btnForcaBruta.setOnAction(e -> logica[0].iniciarForcaBruta());
-        btnPoda.setOnAction(e -> logica[0].iniciarPoda());
+//        btnForcaBruta.setOnAction(e -> logica[0].iniciarForcaBruta());
+        btnForcaBruta.setOnAction(e -> {
+            if(logica[0].isExecutando()) return; // previne nova busca
+            logica[0].iniciarForcaBruta();
+
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
+                    btnPodaCantos, btnSegmentacao, btnConectividade);
+        });
+        btnPoda.setOnAction(e -> {
+            if(logica[0].isExecutando()) return; // previne nova busca
+            logica[0].iniciarPoda();
+
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
+                    btnPodaCantos, btnSegmentacao, btnConectividade);
+        });
+        btnPodaBordas.setOnAction(e -> {
+            if(logica[0].isExecutando()) return; // previne nova busca
+            logica[0].iniciarBordas();
+
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
+                    btnPodaCantos, btnSegmentacao, btnConectividade);
+        });
+        btnPodaCantos.setOnAction(e -> {
+            if(logica[0].isExecutando()) return; // previne nova busca
+            logica[0].iniciarCantos();
+
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
+                    btnPodaCantos, btnSegmentacao, btnConectividade);
+        });
+        btnSegmentacao.setOnAction(e -> {
+            if(logica[0].isExecutando()) return; // previne nova busca
+            logica[0].iniciarSegmentacao();
+
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
+                    btnPodaCantos, btnSegmentacao, btnConectividade);
+        });
+        btnConectividade.setOnAction(e -> {
+            if(logica[0].isExecutando()) return; // previne nova busca
+            logica[0].iniciarConectividade();
+
+            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas,
+                    btnPodaCantos, btnSegmentacao, btnConectividade);
+        });
         btnReset.setOnAction(e -> logica[0].reset());
 
         // Define tamanho inicial
@@ -171,4 +228,11 @@ public class TabuleiroCavalo extends Application {
         stage.setTitle("Passeio do Cavalo");
         stage.show();
     }
+
+    private void setBotoesBuscaAtivos(boolean ativo, Button... botoes) {
+        for (Button b : botoes) {
+            b.setDisable(!ativo);
+        }
+    }
+
 }
