@@ -234,6 +234,14 @@ public class Logica {
 
                         // Verifica se completou o passeio
                         if(movimentoAtual == TAM*TAM){
+                            // Verifica se é solução fechada
+                            isFechada = movimentoValido(
+                                    cavaloLinha,
+                                    cavaloColuna,
+                                    inicioLinha,
+                                    inicioColuna
+                            );
+
                             finalizado = true;
                             executando = false;
                             cancelarExecucao = true;
@@ -424,8 +432,10 @@ public class Logica {
 
     private void verificarSolucao() {
         int movimentosParaConcluir = (TAM * TAM) - 1;
+        // Só verifica se completou o passeio
         if (movimentoAtual < movimentosParaConcluir) return;
 
+        // Verifica se é fechada
         isFechada = movimentoValido(
                 cavaloLinha,
                 cavaloColuna,
@@ -433,7 +443,6 @@ public class Logica {
                 inicioColuna
         );
 
-        backtrackingsEfetuados++;     // <<< jogo terminou
         finalizado = true;
         executando = false;
         if (onBuscaFinalizada != null) {
@@ -543,13 +552,18 @@ public class Logica {
 
                 // VERIFICAR SE NÃO FOI CANCELADO
                 if (!cancelarExecucao) {
-                    isFechada = passeio.IsFechado;
+                    // Pega o valor de isFechada do passeio caso já tenha sido determinado lá
+                    if (passeio.IsFechado) {
+                        isFechada = true;
+                    }
+
+//                    isFechada = passeio.IsFechado;
 
                     javafx.application.Platform.runLater(() -> {
                         if(!cancelarExecucao) {
                             atualizarVisual();
                             atualizarMetricas();
-                            verificarSolucao();
+//                            verificarSolucao();
                         }
                     });
                 }
