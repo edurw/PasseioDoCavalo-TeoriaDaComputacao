@@ -28,10 +28,10 @@ public class Logica {
         this.componentSwitchState = controle;
     }
 
-    private int tempoSleeper = 5;
+    private int sleepTime = 5;
 
-    public void setTempoSleeper(int tempo) {
-        this.tempoSleeper = tempo;
+    public void setSleepTime(int tempo) {
+        this.sleepTime = tempo;
     }
 
     private final int TAM;
@@ -208,7 +208,7 @@ public class Logica {
 
                     if(cancelarExecucao || finalizado) return; // caso resete, cancele o jogo
 
-                    try { Thread.sleep(tempoSleeper); } catch (Exception ignored) {}
+                    try { Thread.sleep(sleepTime); } catch (Exception ignored) {}
 
                     javafx.application.Platform.runLater(() -> {
 

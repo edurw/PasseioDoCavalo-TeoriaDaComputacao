@@ -31,8 +31,8 @@ public class TabuleiroCavalo extends Application {
         Label lblSolucao = new Label("Solução: -");
 
         // TextFields
-        TextField txtTimeSleep = new TextField("5");
-        txtTimeSleep.setTextFormatter(new TextFormatter<String>(change -> {
+        TextField txtSleepTime = new TextField("5");
+        txtSleepTime.setTextFormatter(new TextFormatter<String>(change -> {
             String novoTexto = change.getControlNewText();
             if (novoTexto.isEmpty()) return change; // permite vazio (pra pessoa apagar e digitar de novo)
             if (novoTexto.matches("\\d+")) return change; // permite somente dígitos
@@ -49,7 +49,7 @@ public class TabuleiroCavalo extends Application {
 
         Button btnAplicarTimeSleep = new Button("Aplicar Tempo de Espera");
         btnAplicarTimeSleep.setMaxWidth(Double.MAX_VALUE);
-        txtTimeSleep.setOnAction(e -> btnAplicarTimeSleep.fire());
+        txtSleepTime.setOnAction(e -> btnAplicarTimeSleep.fire());
 
         Button btnAplicarTamanho = new Button("Aplicar tamanho");
         btnAplicarTamanho.setMaxWidth(Double.MAX_VALUE);
@@ -79,7 +79,7 @@ public class TabuleiroCavalo extends Application {
 
         VBox painelLateral = new VBox(10,
                 new Label("Tempo de espera (ms)"),
-                txtTimeSleep,
+                txtSleepTime,
                 btnAplicarTimeSleep,
                 new Label("Tamanho do tabuleiro (N x N)"),
                 txtTamanho,
@@ -109,30 +109,25 @@ public class TabuleiroCavalo extends Application {
         root.setCenter(tabuleiro);
         root.setRight(painelLateral);
 
-        // Tamanhos base
-        double larguraBase = 900;
-        double alturaBase = 700;
+        double tamanhoTabuleiro = 700;
 
-        Scene scene = new Scene(root, larguraBase, alturaBase);
+        double larguraTotal = tamanhoTabuleiro + painelLateral.getPrefWidth();
+        double alturaTotal = Math.max(tamanhoTabuleiro, painelLateral.getPrefHeight());
+
+        Scene scene = new Scene(root, larguraTotal, alturaTotal);
 
         // runnable para ativar botoes ao finalizar/resetar
         Runnable habilitarBotoesBusca = () -> {
             switchButtons(true,
                     btnAplicarTimeSleep, btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
                     btnPodaCantos, btnSegmentacao, btnConectividade);
-            switchTextFields(true, txtTimeSleep, txtTamanho);
+            switchTextFields(true, txtSleepTime, txtTamanho);
         };
 
         // Inicializa lógica numa "referência mutável"
         final Logica[] logica = new Logica[1];
 
-        // Inicializa com tamanho calculado
-        double tamanhoInicial = Math.min(
-                scene.getWidth() - painelLateral.getWidth(),
-                scene.getHeight()
-        );
-
-        logica[0] = new Logica(tabuleiro, tamanho, tamanhoInicial);
+        logica[0] = new Logica(tabuleiro, tamanho, tamanhoTabuleiro);
         logica[0].setLabels(
                 lblPosicao,
                 lblMovimentosTotais,
@@ -146,7 +141,7 @@ public class TabuleiroCavalo extends Application {
             switchButtons(ativo,
                     btnAplicarTimeSleep, btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
                     btnPodaCantos, btnSegmentacao, btnConectividade);
-            switchTextFields(ativo, txtTimeSleep, txtTamanho);
+            switchTextFields(ativo, txtSleepTime, txtTamanho);
         });
 
         // passando pra logica o runnable
@@ -173,7 +168,7 @@ public class TabuleiroCavalo extends Application {
         });
 
         btnAplicarTimeSleep.setOnAction(e -> {
-            String texto = txtTimeSleep.getText();
+            String texto = txtSleepTime.getText();
 
             int novoTempo;
             try {
@@ -186,7 +181,7 @@ public class TabuleiroCavalo extends Application {
                 return;
             }
 
-            int min = 1;
+            int min = 0;
             int max = 5000;
             if (novoTempo < min || novoTempo > max) {
                 Alert a = new Alert(Alert.AlertType.WARNING);
@@ -196,7 +191,7 @@ public class TabuleiroCavalo extends Application {
                 return;
             }
 
-            logica[0].setTempoSleeper(novoTempo);
+            logica[0].setSleepTime(novoTempo);
         });
 
         btnAplicarTamanho.setOnAction(e -> {
@@ -242,9 +237,9 @@ public class TabuleiroCavalo extends Application {
             // Reconecta o controle de componentes
             logica[0].setComponentSwitchState(ativo -> {
                 switchButtons(ativo,
-                        btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
+                        btnAplicarTimeSleep, btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
                         btnPodaCantos, btnSegmentacao, btnConectividade);
-                switchTextFields(ativo, txtTimeSleep, txtTamanho);
+                switchTextFields(ativo, txtSleepTime, txtTamanho);
             });
 
             // Reconecta o callback de finalização
@@ -287,7 +282,7 @@ public class TabuleiroCavalo extends Application {
         btnReset.setOnAction(e -> logica[0].reset());
 
         // Define tamanho inicial
-        tabuleiro.setPrefSize(tamanhoInicial, tamanhoInicial);
+        tabuleiro.setPrefSize(tamanhoTabuleiro, tamanhoTabuleiro);
 
         stage.setScene(scene);
         stage.setTitle("Passeio do Cavalo");
