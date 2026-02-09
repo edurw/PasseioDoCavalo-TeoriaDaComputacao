@@ -25,7 +25,7 @@ public class TabuleiroCavalo extends Application {
         Label lblPosicao = new Label("Posição: -");
         Label lblMovimentosTotais = new Label("Movimento Total: 0");
         Label lblMovimentoAtual = new Label("Movimento Atual: 0");
-        Label lblIteracoes = new Label("Iterações: 0");
+        Label lblBacktrackingsEfetuados = new Label("Backtrackings: 0");
         Label lblTempo = new Label("Tempo: 0 ms");
         Label lblSolucao = new Label("Solução: -");
 
@@ -86,7 +86,7 @@ public class TabuleiroCavalo extends Application {
                 lblPosicao,
                 lblMovimentosTotais,
                 lblMovimentoAtual,
-                lblIteracoes,
+                lblBacktrackingsEfetuados,
                 lblTempo,
                 lblSolucao,
                 new Label(""),
@@ -130,7 +130,7 @@ public class TabuleiroCavalo extends Application {
                 lblPosicao,
                 lblMovimentosTotais,
                 lblMovimentoAtual,
-                lblIteracoes,
+                lblBacktrackingsEfetuados,
                 lblTempo,
                 lblSolucao
         );
@@ -205,7 +205,7 @@ public class TabuleiroCavalo extends Application {
                 return;
             }
 
-            int min = 5;
+            int min = 4;
             int max = 25;
             if (novoTam < min || novoTam > max) {
                 Alert a = new Alert(Alert.AlertType.WARNING);
@@ -228,7 +228,7 @@ public class TabuleiroCavalo extends Application {
                     lblPosicao,
                     lblMovimentosTotais,
                     lblMovimentoAtual,
-                    lblIteracoes,
+                    lblBacktrackingsEfetuados,
                     lblTempo,
                     lblSolucao
             );

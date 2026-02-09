@@ -62,7 +62,7 @@ public class Logica {
     // contagem de movimentos
     private int movimentosTotais = 0;
     private int movimentoAtual = 0;
-    private int iteracoes = 0;
+    private int backtrackingsEfetuados = 0;
 
     private int inicioLinha = -1;
     private int inicioColuna = -1;
@@ -82,7 +82,7 @@ public class Logica {
     private Label lblPosicao;
     private Label lblMovimentosTotais;
     private Label lblMovimentoAtual;
-    private Label lblIteracoes;
+    private Label lblBacktrackingsEfetuados;
     private Label lblTempo;
     private Label lblSolucao;
 
@@ -215,7 +215,7 @@ public class Logica {
                         if (desfazendo) { // se esta efetuando backtracking
                             estado[pos.linha][pos.coluna] = 0;
                             movimentoAtual--; // profundidade diminui
-                            iteracoes++; // aqui aumenta iteracao, indicando que precisou fazer uma revisao nos movimentos
+                            backtrackingsEfetuados++; // aqui aumenta iteracao, indicando que precisou fazer uma revisao nos movimentos
 
                             // Atualizar posição anterior ao desfazer
                             cavaloLinhaAnterior = cavaloLinha;
@@ -369,14 +369,14 @@ public class Logica {
             Label posicao,
             Label movimentosTotais,
             Label movimentoAtual,
-            Label iteracoes,
+            Label backtrackingsEfetuados,
             Label tempo,
             Label solucao
     ) {
         this.lblPosicao = posicao;
         this.lblMovimentosTotais = movimentosTotais;
         this.lblMovimentoAtual = movimentoAtual;
-        this.lblIteracoes = iteracoes;
+        this.lblBacktrackingsEfetuados = backtrackingsEfetuados;
         this.lblTempo = tempo;
         this.lblSolucao = solucao;
 
@@ -392,7 +392,7 @@ public class Logica {
         }
 
         if (lblMovimentosTotais != null)
-            lblMovimentosTotais.setText("Movimentos totais: " + movimentosTotais);
+            lblMovimentosTotais.setText("Movimentos Totais: " + movimentosTotais);
 
         if (lblMovimentoAtual != null)
             lblMovimentoAtual.setText("Movimento Atual: " + movimentoAtual);
@@ -400,8 +400,8 @@ public class Logica {
         if (lblTempo != null)
             lblTempo.setText("Tempo: " + getTempoDecorridoMs() + " ms");
 
-        if (lblIteracoes != null)
-            lblIteracoes.setText("Iterações: " + iteracoes);
+        if (lblBacktrackingsEfetuados != null)
+            lblBacktrackingsEfetuados.setText("Backtrackings: " + backtrackingsEfetuados);
 
         if (lblSolucao != null) {
             int movimentosParaConcluir = (TAM * TAM) - 1;
@@ -427,7 +427,7 @@ public class Logica {
                 inicioColuna
         );
 
-        iteracoes++;     // <<< jogo terminou
+        backtrackingsEfetuados++;     // <<< jogo terminou
         finalizado = true;
         executando = false;
         if (onBuscaFinalizada != null) {
@@ -488,7 +488,7 @@ public class Logica {
         executando = false;
         finalizado = false;
         tempoInicio = 0;
-        iteracoes = 0;
+        backtrackingsEfetuados = 0;
     }
 
     // reseta o tabuleiro
