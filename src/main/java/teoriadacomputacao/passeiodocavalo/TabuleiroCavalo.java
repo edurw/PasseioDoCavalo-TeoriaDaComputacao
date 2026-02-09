@@ -181,7 +181,7 @@ public class TabuleiroCavalo extends Application {
                 return;
             }
 
-            int min = 0;
+            int min = 1;
             int max = 5000;
             if (novoTempo < min || novoTempo > max) {
                 Alert a = new Alert(Alert.AlertType.WARNING);
@@ -218,6 +218,9 @@ public class TabuleiroCavalo extends Application {
                 return;
             }
 
+            // Salva o sleepTime atual antes de recriar
+            int sleepTimeAtual = Integer.parseInt(txtSleepTime.getText().trim());
+
             // Calcula o tamanho atual da janela
             double larguraDisponivel = scene.getWidth() - painelLateral.getWidth();
             double tamanhoAtual = Math.min(larguraDisponivel, scene.getHeight());
@@ -244,6 +247,8 @@ public class TabuleiroCavalo extends Application {
 
             // Reconecta o callback de finalização
             logica[0].setOnBuscaFinalizada(habilitarBotoesBusca);
+
+            logica[0].setSleepTime(sleepTimeAtual);
 
             // Força atualização imediata
             tabuleiro.setPrefSize(tamanhoAtual, tamanhoAtual);
