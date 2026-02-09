@@ -59,19 +59,19 @@ public class TabuleiroCavalo extends Application {
         Button btnForcaBruta = new Button("Força Bruta");
         btnForcaBruta.setMaxWidth(Double.MAX_VALUE);
 
-        Button btnPoda = new Button("Menos movimentos Futuros");
+        Button btnPoda = new Button("Warnsdorff");
         btnPoda.setMaxWidth(Double.MAX_VALUE);
 
-        Button btnPodaBordas = new Button("Focar nas Bordas");
+        Button btnPodaBordas = new Button("Poda de Bordas");
         btnPodaBordas.setMaxWidth(Double.MAX_VALUE);
 
-        Button btnPodaCantos = new Button("Focar nos Cantos");
+        Button btnPodaCantos = new Button("Poda de Cantos");
         btnPodaCantos.setMaxWidth(Double.MAX_VALUE);
 
-        Button btnSegmentacao = new Button("Segmentar Secções");
+        Button btnSegmentacao = new Button("Segmentação");
         btnSegmentacao.setMaxWidth(Double.MAX_VALUE);
 
-        Button btnConectividade = new Button("Evitar Casas Sozinhas");
+        Button btnConectividade = new Button("Conectividade");
         btnConectividade.setMaxWidth(Double.MAX_VALUE);
 
         Button btnReset = new Button("Reset");
