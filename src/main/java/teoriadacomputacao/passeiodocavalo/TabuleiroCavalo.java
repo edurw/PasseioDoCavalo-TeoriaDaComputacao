@@ -109,7 +109,7 @@ public class TabuleiroCavalo extends Application {
         root.setCenter(tabuleiro);
         root.setRight(painelLateral);
 
-        double tamanhoTabuleiro = 700;
+        double tamanhoTabuleiro = 720;
 
         double larguraTotal = tamanhoTabuleiro + painelLateral.getPrefWidth();
         double alturaTotal = Math.max(tamanhoTabuleiro, painelLateral.getPrefHeight());
