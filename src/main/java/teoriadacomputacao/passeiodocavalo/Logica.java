@@ -2,10 +2,14 @@ package teoriadacomputacao.passeiodocavalo;
 
 import javafx.application.Platform;
 import javafx.scene.control.Button;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.control.Label;
 import javafx.stage.Screen;
+
+import java.util.Objects;
 
 public class Logica {
     // logica dos algoritmos
@@ -24,12 +28,20 @@ public class Logica {
         this.componentSwitchState = controle;
     }
 
+    private int tempoSleeper = 5;
+
+    public void setTempoSleeper(int tempo) {
+        this.tempoSleeper = tempo;
+    }
+
     private final int TAM;
     private double tamanhoTabuleiro;
     // grid visual
     private final GridPane tabuleiro;
     // referência visual
     private final StackPane[][] casas;
+
+    private final boolean[][] casasJaExploradas;
 
     private final int[][] estado;
 
@@ -49,7 +61,7 @@ public class Logica {
 
     // contagem de movimentos
     private int movimentosTotais = 0;
-    private int movimentosAtuais = 0;
+    private int movimentoAtual = 0;
     private int iteracoes = 0;
     private int descobertos = 0;
 
@@ -70,11 +82,11 @@ public class Logica {
 
     private Label lblPosicao;
     private Label lblMovimentosTotais;
-    private Label lblMovimentosAtuais;
+    private Label lblMovimentoAtual;
+    private Label lblDescobertos;
     private Label lblIteracoes;
     private Label lblTempo;
     private Label lblSolucao;
-    private Label lblDescobertos;
 
     // modo do algoritmo
     public enum Modo {
@@ -111,8 +123,9 @@ public class Logica {
         modo = Modo.CONECTIVIDADE;
     }
 
-
     private Modo modo = Modo.NENHUM;
+
+    private Image imagemCavalo;
 
     // Construtor
     public Logica(GridPane tabuleiro, int tamanho, double tamanhoVisual) {
@@ -122,6 +135,15 @@ public class Logica {
 
         this.estado = new int[TAM][TAM];
         this.casas = new StackPane[TAM][TAM];
+        this.casasJaExploradas = new boolean[TAM][TAM];
+
+        // CARREGAR IMAGEM DO CAVALO
+        try {
+            imagemCavalo = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cavalo.png")));
+        } catch (Exception e) {
+            System.err.println("Erro ao carregar imagem do cavalo: " + e.getMessage());
+            imagemCavalo = null;
+        }
 
         criarTabuleiro();
     }
@@ -186,7 +208,7 @@ public class Logica {
 
                     if(cancelarExecucao || finalizado) return; // caso resete, cancele o jogo
 
-                    try { Thread.sleep(5); } catch (Exception ignored) {}
+                    try { Thread.sleep(tempoSleeper); } catch (Exception ignored) {}
 
                     javafx.application.Platform.runLater(() -> {
 
@@ -194,8 +216,8 @@ public class Logica {
 
                         if (desfazendo) { // se esta efetuando backtracking
                             estado[pos.linha][pos.coluna] = 0;
-                            movimentosAtuais--; // profundidade diminui
-                            descobertos--; // diminuir descobertos, pq esta voltando, entao nao esta mais descoberto
+                            movimentoAtual--; // profundidade diminui
+//                            descobertos--; // diminuir descobertos, pq esta voltando, entao nao esta mais descoberto
                             iteracoes++; // aqui aumenta iteracao, indicando que precisou fazer uma revisao nos movimentos
 
                             // Atualizar posição anterior ao desfazer
@@ -203,23 +225,25 @@ public class Logica {
                             cavaloColunaAnterior = cavaloColuna;
                         } else {
                             movimentosTotais++;
-                            movimentosAtuais++;
+                            movimentoAtual++;
 
-                            if(estado[pos.linha][pos.coluna] == 0)
+                            if(!casasJaExploradas[pos.linha][pos.coluna]) {
                                 descobertos++;
+                                casasJaExploradas[pos.linha][pos.coluna] = true;
+                            }
 
                             // Salvar posição anterior ANTES de atualizar atual
                             cavaloLinhaAnterior = cavaloLinha;
                             cavaloColunaAnterior = cavaloColuna;
 
-                            estado[pos.linha][pos.coluna] = movimentosAtuais;
+                            estado[pos.linha][pos.coluna] = movimentoAtual;
 
                             cavaloLinha = pos.linha;
                             cavaloColuna = pos.coluna;
                         }
 
                         //  potencial problema na solucao, que permite o algoritmo rodar por alguns instantes
-                        if(descobertos == TAM*TAM || descobertos >= TAM*TAM){
+                        if(movimentoAtual  == TAM*TAM){
 
                             finalizado = true;
                             executando = false;
@@ -252,8 +276,8 @@ public class Logica {
         inicioColuna = coluna;
 
         movimentosTotais = 1;
-        movimentosAtuais = 1;
-        estado[linha][coluna] = movimentosAtuais;
+        movimentoAtual = 1;
+        estado[linha][coluna] = movimentoAtual;
 
         descobertos = 1;
 
@@ -307,9 +331,20 @@ public class Logica {
 
                 // Mostrar cavalo na posição atual
                 if (i == cavaloLinha && j == cavaloColuna) {
-                    Label cavalo = new Label("♞");
-                    cavalo.setStyle("-fx-font-size: " + tamanhoCavalo + "px; -fx-text-fill: black;");
-                    casa.getChildren().add(cavalo);
+                    if (imagemCavalo != null) {
+                        // Usar ImageView em vez de Label com emoji
+                        ImageView cavaloView = new ImageView(imagemCavalo);
+                        cavaloView.setFitWidth(tamanhoCavalo);
+                        cavaloView.setFitHeight(tamanhoCavalo);
+                        cavaloView.setPreserveRatio(true);
+                        cavaloView.setSmooth(true); // Suavização para melhor qualidade
+                        casa.getChildren().add(cavaloView);
+                    } else {
+                        // Fallback: usar emoji se imagem não carregar
+                        Label cavalo = new Label("♞");
+                        cavalo.setStyle("-fx-font-size: " + tamanhoCavalo + "px; -fx-text-fill: black;");
+                        casa.getChildren().add(cavalo);
+                    }
                 }
             }
         }
@@ -339,19 +374,19 @@ public class Logica {
     public void setLabels(
             Label posicao,
             Label movimentosTotais,
-            Label movimentosAtuais,
+            Label movimentoAtual,
+            Label descobertos,
             Label iteracoes,
             Label tempo,
-            Label solucao,
-            Label descobertos
+            Label solucao
     ) {
         this.lblPosicao = posicao;
         this.lblMovimentosTotais = movimentosTotais;
-        this.lblMovimentosAtuais = movimentosAtuais;
+        this.lblMovimentoAtual = movimentoAtual;
+        this.lblDescobertos = descobertos;
         this.lblIteracoes = iteracoes;
         this.lblTempo = tempo;
         this.lblSolucao = solucao;
-        this.lblDescobertos = descobertos;
 
         atualizarMetricas();
     }
@@ -367,8 +402,11 @@ public class Logica {
         if (lblMovimentosTotais != null)
             lblMovimentosTotais.setText("Movimentos totais: " + movimentosTotais);
 
-        if (lblMovimentosAtuais != null)
-            lblMovimentosAtuais.setText("Movimento Atual: " + movimentosAtuais);
+        if (lblMovimentoAtual != null)
+            lblMovimentoAtual.setText("Movimento Atual: " + movimentoAtual);
+
+        if (lblDescobertos != null)
+            lblDescobertos.setText("Casas Descobertas: " + descobertos);
 
         if (lblTempo != null)
             lblTempo.setText("Tempo: " + getTempoDecorridoMs() + " ms");
@@ -376,13 +414,10 @@ public class Logica {
         if (lblIteracoes != null)
             lblIteracoes.setText("Iterações: " + iteracoes);
 
-        if (lblDescobertos != null)
-            lblDescobertos.setText("Grids Descobertos: " + descobertos);
-
         if (lblSolucao != null) {
             int movimentosParaConcluir = (TAM * TAM) - 1;
 
-            if (descobertos < movimentosParaConcluir) {
+            if (movimentoAtual < movimentosParaConcluir) {
                 lblSolucao.setText("Solução: -");
             } else {
                 lblSolucao.setText(
@@ -394,7 +429,7 @@ public class Logica {
 
     private void verificarSolucao() {
         int movimentosParaConcluir = (TAM * TAM) - 1;
-        if (descobertos < movimentosParaConcluir) return;
+        if (movimentoAtual < movimentosParaConcluir) return;
 
         isFechada = movimentoValido(
                 cavaloLinha,
@@ -480,9 +515,15 @@ public class Logica {
         inicioColuna = -1;
 
         movimentosTotais = 0;
-        movimentosAtuais = 0;
+        movimentoAtual = 0;
         descobertos = 0;
         isFechada = false;
+
+        for (int i = 0; i < TAM; i++) {
+            for (int j = 0; j < TAM; j++) {
+                casasJaExploradas[i][j] = false;
+            }
+        }
 
         limparTabuleiro();
     }

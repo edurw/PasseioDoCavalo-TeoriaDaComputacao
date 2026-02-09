@@ -4,10 +4,13 @@ import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+
+import java.util.Objects;
 
 public class TabuleiroCavalo extends Application {
 
@@ -18,29 +21,35 @@ public class TabuleiroCavalo extends Application {
 
         int tamanho = 8;
 
-        // Labels (MÉTRICAS)
+        // Labels
         Label lblPosicao = new Label("Posição: -");
         Label lblMovimentosTotais = new Label("Movimento Total: 0");
-        Label lblMovimentosAtuais = new Label("Movimento Atual: 0");
+        Label lblMovimentoAtual = new Label("Movimento Atual: 0");
+        Label lblDescobertos = new Label("Casas Descobertas: 0");
         Label lblIteracoes = new Label("Iterações: 0");
         Label lblTempo = new Label("Tempo: 0 ms");
         Label lblSolucao = new Label("Solução: -");
-        Label lblDescobertos = new Label("Grids Descobertos: 0");
 
-        // TextField para tamanho
+        // TextFields
+        TextField txtTimeSleep = new TextField("5");
+        txtTimeSleep.setTextFormatter(new TextFormatter<String>(change -> {
+            String novoTexto = change.getControlNewText();
+            if (novoTexto.isEmpty()) return change; // permite vazio (pra pessoa apagar e digitar de novo)
+            if (novoTexto.matches("\\d+")) return change; // permite somente dígitos
+            return null; // bloqueia qualquer outra coisa
+        }));
+
         TextField txtTamanho = new TextField("8");
         txtTamanho.setTextFormatter(new TextFormatter<String>(change -> {
             String novoTexto = change.getControlNewText();
-
-            // permite vazio (pra pessoa apagar e digitar de novo)
-            if (novoTexto.isEmpty()) return change;
-
-            // permite somente dígitos
-            if (novoTexto.matches("\\d+")) return change;
-
-            // bloqueia qualquer outra coisa
-            return null;
+            if (novoTexto.isEmpty()) return change; // permite vazio (pra pessoa apagar e digitar de novo)
+            if (novoTexto.matches("\\d+")) return change; // permite somente dígitos
+            return null; // bloqueia qualquer outra coisa
         }));
+
+        Button btnAplicarTimeSleep = new Button("Aplicar Tempo de Espera");
+        btnAplicarTimeSleep.setMaxWidth(Double.MAX_VALUE);
+        txtTimeSleep.setOnAction(e -> btnAplicarTimeSleep.fire());
 
         Button btnAplicarTamanho = new Button("Aplicar tamanho");
         btnAplicarTamanho.setMaxWidth(Double.MAX_VALUE);
@@ -69,15 +78,18 @@ public class TabuleiroCavalo extends Application {
         btnReset.setMaxWidth(Double.MAX_VALUE);
 
         VBox painelLateral = new VBox(10,
+                new Label("Tempo de espera (ms)"),
+                txtTimeSleep,
+                btnAplicarTimeSleep,
                 new Label("Tamanho do tabuleiro (N x N)"),
                 txtTamanho,
                 btnAplicarTamanho,
                 lblPosicao,
                 lblMovimentosTotais,
-                lblMovimentosAtuais,
+                lblMovimentoAtual,
+                lblDescobertos,
                 lblIteracoes,
                 lblTempo,
-                lblDescobertos,
                 lblSolucao,
                 new Label(""),
                 new Label("Algoritmos:"),
@@ -106,13 +118,10 @@ public class TabuleiroCavalo extends Application {
         // runnable para ativar botoes ao finalizar/resetar
         Runnable habilitarBotoesBusca = () -> {
             switchButtons(true,
-                    btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
+                    btnAplicarTimeSleep, btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
                     btnPodaCantos, btnSegmentacao, btnConectividade);
-            switchTextFields(true, txtTamanho);
+            switchTextFields(true, txtTimeSleep, txtTamanho);
         };
-
-        // runnable para ativar botoes ao finalizar/resetar
-        Runnable habilitarTextfields = () -> switchTextFields(true, txtTamanho);
 
         // Inicializa lógica numa "referência mutável"
         final Logica[] logica = new Logica[1];
@@ -127,17 +136,17 @@ public class TabuleiroCavalo extends Application {
         logica[0].setLabels(
                 lblPosicao,
                 lblMovimentosTotais,
-                lblMovimentosAtuais,
+                lblMovimentoAtual,
+                lblDescobertos,
                 lblIteracoes,
                 lblTempo,
-                lblSolucao,
-                lblDescobertos
+                lblSolucao
         );
         logica[0].setComponentSwitchState(ativo -> {
             switchButtons(ativo,
-                    btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
+                    btnAplicarTimeSleep, btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
                     btnPodaCantos, btnSegmentacao, btnConectividade);
-            switchTextFields(ativo, txtTamanho);
+            switchTextFields(ativo, txtTimeSleep, txtTamanho);
         });
 
         // passando pra logica o runnable
@@ -161,6 +170,33 @@ public class TabuleiroCavalo extends Application {
         // VINCULA O TAMANHO DO TABULEIRO À LARGURA DISPONÍVEL
         scene.widthProperty().addListener((obs, oldVal, newVal) -> {
             atualizarTamanho.run();
+        });
+
+        btnAplicarTimeSleep.setOnAction(e -> {
+            String texto = txtTimeSleep.getText();
+
+            int novoTempo;
+            try {
+                novoTempo = Integer.parseInt(texto.trim());
+            } catch (NumberFormatException ex) {
+                Alert a = new Alert(Alert.AlertType.WARNING);
+                a.setHeaderText("Tempo inválido");
+                a.setContentText("Digite um número inteiro");
+                a.showAndWait();
+                return;
+            }
+
+            int min = 1;
+            int max = 5000;
+            if (novoTempo < min || novoTempo > max) {
+                Alert a = new Alert(Alert.AlertType.WARNING);
+                a.setHeaderText("Tempo fora do intervalo");
+                a.setContentText("Escolha um tamanho entre " + min + " e " + max + ".");
+                a.showAndWait();
+                return;
+            }
+
+            logica[0].setTempoSleeper(novoTempo);
         });
 
         btnAplicarTamanho.setOnAction(e -> {
@@ -196,11 +232,11 @@ public class TabuleiroCavalo extends Application {
             logica[0].setLabels(
                     lblPosicao,
                     lblMovimentosTotais,
-                    lblMovimentosAtuais,
+                    lblMovimentoAtual,
+                    lblDescobertos,
                     lblIteracoes,
                     lblTempo,
-                    lblSolucao,
-                    lblDescobertos
+                    lblSolucao
             );
 
             // Reconecta o controle de componentes
@@ -208,7 +244,7 @@ public class TabuleiroCavalo extends Application {
                 switchButtons(ativo,
                         btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
                         btnPodaCantos, btnSegmentacao, btnConectividade);
-                switchTextFields(ativo, txtTamanho);
+                switchTextFields(ativo, txtTimeSleep, txtTamanho);
             });
 
             // Reconecta o callback de finalização
@@ -257,6 +293,15 @@ public class TabuleiroCavalo extends Application {
         stage.setTitle("Passeio do Cavalo");
         stage.centerOnScreen();
         stage.setResizable(false);
+
+        try {
+            Image icone = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/cavalo.png")));
+            stage.getIcons().add(icone);
+
+        } catch (Exception e) {
+            System.err.println("Erro ao carregar ícone: " + e.getMessage());
+        }
+
         stage.show();
     }
 
