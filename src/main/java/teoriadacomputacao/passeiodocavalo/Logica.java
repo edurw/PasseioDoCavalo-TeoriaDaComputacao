@@ -63,7 +63,6 @@ public class Logica {
     private int movimentosTotais = 0;
     private int movimentoAtual = 0;
     private int iteracoes = 0;
-    private int descobertos = 0;
 
     private int inicioLinha = -1;
     private int inicioColuna = -1;
@@ -83,7 +82,6 @@ public class Logica {
     private Label lblPosicao;
     private Label lblMovimentosTotais;
     private Label lblMovimentoAtual;
-    private Label lblDescobertos;
     private Label lblIteracoes;
     private Label lblTempo;
     private Label lblSolucao;
@@ -217,7 +215,6 @@ public class Logica {
                         if (desfazendo) { // se esta efetuando backtracking
                             estado[pos.linha][pos.coluna] = 0;
                             movimentoAtual--; // profundidade diminui
-//                            descobertos--; // diminuir descobertos, pq esta voltando, entao nao esta mais descoberto
                             iteracoes++; // aqui aumenta iteracao, indicando que precisou fazer uma revisao nos movimentos
 
                             // Atualizar posição anterior ao desfazer
@@ -228,7 +225,6 @@ public class Logica {
                             movimentoAtual++;
 
                             if(!casasJaExploradas[pos.linha][pos.coluna]) {
-                                descobertos++;
                                 casasJaExploradas[pos.linha][pos.coluna] = true;
                             }
 
@@ -278,8 +274,6 @@ public class Logica {
         movimentosTotais = 1;
         movimentoAtual = 1;
         estado[linha][coluna] = movimentoAtual;
-
-        descobertos = 1;
 
         atualizarVisual();
         atualizarMetricas();
@@ -375,7 +369,6 @@ public class Logica {
             Label posicao,
             Label movimentosTotais,
             Label movimentoAtual,
-            Label descobertos,
             Label iteracoes,
             Label tempo,
             Label solucao
@@ -383,7 +376,6 @@ public class Logica {
         this.lblPosicao = posicao;
         this.lblMovimentosTotais = movimentosTotais;
         this.lblMovimentoAtual = movimentoAtual;
-        this.lblDescobertos = descobertos;
         this.lblIteracoes = iteracoes;
         this.lblTempo = tempo;
         this.lblSolucao = solucao;
@@ -404,9 +396,6 @@ public class Logica {
 
         if (lblMovimentoAtual != null)
             lblMovimentoAtual.setText("Movimento Atual: " + movimentoAtual);
-
-        if (lblDescobertos != null)
-            lblDescobertos.setText("Casas Descobertas: " + descobertos);
 
         if (lblTempo != null)
             lblTempo.setText("Tempo: " + getTempoDecorridoMs() + " ms");
@@ -516,7 +505,6 @@ public class Logica {
 
         movimentosTotais = 0;
         movimentoAtual = 0;
-        descobertos = 0;
         isFechada = false;
 
         for (int i = 0; i < TAM; i++) {
