@@ -42,9 +42,9 @@ public class TabuleiroCavalo extends Application {
             return null;
         }));
 
-        Button btnAplicar = new Button("Aplicar tamanho");
-        btnAplicar.setMaxWidth(Double.MAX_VALUE);
-        txtTamanho.setOnAction(e -> btnAplicar.fire());
+        Button btnAplicarTamanho = new Button("Aplicar tamanho");
+        btnAplicarTamanho.setMaxWidth(Double.MAX_VALUE);
+        txtTamanho.setOnAction(e -> btnAplicarTamanho.fire());
 
         // BOTÕES
         Button btnForcaBruta = new Button("Força Bruta");
@@ -71,16 +71,15 @@ public class TabuleiroCavalo extends Application {
         VBox painelLateral = new VBox(10,
                 new Label("Tamanho do tabuleiro (N x N)"),
                 txtTamanho,
-                btnAplicar,
-                new Label("Métricas:"),
+                btnAplicarTamanho,
                 lblPosicao,
-                new Label("Movimentos:"),
                 lblMovimentosTotais,
                 lblMovimentosAtuais,
                 lblIteracoes,
                 lblTempo,
                 lblDescobertos,
                 lblSolucao,
+                new Label(""),
                 new Label("Algoritmos:"),
                 btnForcaBruta,
                 btnPoda,
@@ -92,17 +91,28 @@ public class TabuleiroCavalo extends Application {
         );
 
         painelLateral.setPadding(new Insets(15));
-        painelLateral.setPrefWidth(160);
+        painelLateral.setPrefWidth(220);
 
         BorderPane root = new BorderPane();
         root.setCenter(tabuleiro);
         root.setRight(painelLateral);
 
-        Scene scene = new Scene(root, 720, 520);
+        // Tamanhos base
+        double larguraBase = 900;
+        double alturaBase = 700;
+
+        Scene scene = new Scene(root, larguraBase, alturaBase);
 
         // runnable para ativar botoes ao finalizar/resetar
-        Runnable habilitarBotoesBusca = () -> setBotoesBuscaAtivos(true, btnForcaBruta, btnPoda, btnPodaBordas,
-                btnPodaCantos, btnSegmentacao, btnConectividade);
+        Runnable habilitarBotoesBusca = () -> {
+            switchButtons(true,
+                    btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
+                    btnPodaCantos, btnSegmentacao, btnConectividade);
+            switchTextFields(true, txtTamanho);
+        };
+
+        // runnable para ativar botoes ao finalizar/resetar
+        Runnable habilitarTextfields = () -> switchTextFields(true, txtTamanho);
 
         // Inicializa lógica numa "referência mutável"
         final Logica[] logica = new Logica[1];
@@ -123,9 +133,13 @@ public class TabuleiroCavalo extends Application {
                 lblSolucao,
                 lblDescobertos
         );
-        logica[0].setControleBotoes(ativo -> setBotoesBuscaAtivos(ativo,
-                btnForcaBruta, btnPoda, btnPodaBordas,
-                btnPodaCantos, btnSegmentacao, btnConectividade));
+        logica[0].setComponentSwitchState(ativo -> {
+            switchButtons(ativo,
+                    btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
+                    btnPodaCantos, btnSegmentacao, btnConectividade);
+            switchTextFields(ativo, txtTamanho);
+        });
+
         // passando pra logica o runnable
         logica[0].setOnBuscaFinalizada(habilitarBotoesBusca);
 
@@ -149,7 +163,7 @@ public class TabuleiroCavalo extends Application {
             atualizarTamanho.run();
         });
 
-        btnAplicar.setOnAction(e -> {
+        btnAplicarTamanho.setOnAction(e -> {
             String texto = txtTamanho.getText();
 
             int novoTam;
@@ -163,8 +177,8 @@ public class TabuleiroCavalo extends Application {
                 return;
             }
 
-            int min = 4;
-            int max = 30;
+            int min = 5;
+            int max = 25;
             if (novoTam < min || novoTam > max) {
                 Alert a = new Alert(Alert.AlertType.WARNING);
                 a.setHeaderText("Tamanho fora do intervalo");
@@ -179,49 +193,61 @@ public class TabuleiroCavalo extends Application {
 
             // Recria a lógica com o novo tamanho E com o tamanho visual atual
             logica[0] = new Logica(tabuleiro, novoTam, tamanhoAtual);
-            logica[0].setLabels(lblPosicao, lblMovimentosTotais, lblMovimentosAtuais, lblIteracoes, lblTempo, lblSolucao, lblDescobertos);
+            logica[0].setLabels(
+                    lblPosicao,
+                    lblMovimentosTotais,
+                    lblMovimentosAtuais,
+                    lblIteracoes,
+                    lblTempo,
+                    lblSolucao,
+                    lblDescobertos
+            );
+
+            // Reconecta o controle de componentes
+            logica[0].setComponentSwitchState(ativo -> {
+                switchButtons(ativo,
+                        btnAplicarTamanho, btnForcaBruta, btnPoda, btnPodaBordas,
+                        btnPodaCantos, btnSegmentacao, btnConectividade);
+                switchTextFields(ativo, txtTamanho);
+            });
+
+            // Reconecta o callback de finalização
+            logica[0].setOnBuscaFinalizada(habilitarBotoesBusca);
 
             // Força atualização imediata
             tabuleiro.setPrefSize(tamanhoAtual, tamanhoAtual);
         });
 
-//        btnForcaBruta.setOnAction(e -> logica[0].iniciarForcaBruta());
         btnForcaBruta.setOnAction(e -> {
-            if(logica[0].isExecutando()) return; // previne nova busca
+            if(logica[0].isExecutando()) return; 
             logica[0].iniciarForcaBruta();
-
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
+
         btnPoda.setOnAction(e -> {
-            if(logica[0].isExecutando()) return; // previne nova busca
+            if(logica[0].isExecutando()) return; 
             logica[0].iniciarPoda();
-
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
+
         btnPodaBordas.setOnAction(e -> {
-            if(logica[0].isExecutando()) return; // previne nova busca
+            if(logica[0].isExecutando()) return; 
             logica[0].iniciarBordas();
-
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
+
         btnPodaCantos.setOnAction(e -> {
-            if(logica[0].isExecutando()) return; // previne nova busca
+            if(logica[0].isExecutando()) return; 
             logica[0].iniciarCantos();
-
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
+
         btnSegmentacao.setOnAction(e -> {
-            if(logica[0].isExecutando()) return; // previne nova busca
+            if(logica[0].isExecutando()) return; 
             logica[0].iniciarSegmentacao();
-
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
+
         btnConectividade.setOnAction(e -> {
-            if(logica[0].isExecutando()) return; // previne nova busca
+            if(logica[0].isExecutando()) return;
             logica[0].iniciarConectividade();
-
-            setBotoesBuscaAtivos(false, btnForcaBruta, btnPoda, btnPodaBordas, btnPodaCantos, btnSegmentacao, btnConectividade);
         });
+
         btnReset.setOnAction(e -> logica[0].reset());
 
         // Define tamanho inicial
@@ -229,13 +255,18 @@ public class TabuleiroCavalo extends Application {
 
         stage.setScene(scene);
         stage.setTitle("Passeio do Cavalo");
+        stage.centerOnScreen();
+        stage.setResizable(false);
         stage.show();
     }
 
-    private void setBotoesBuscaAtivos(boolean ativo, Button... botoes) {
-        for (Button b : botoes) {
+    private void switchButtons(boolean ativo, Button... botoes) {
+        for (Button b : botoes)
             b.setDisable(!ativo);
-        }
     }
 
+    private void switchTextFields(boolean ativo, TextField... campos) {
+        for (TextField c : campos)
+            c.setDisable(!ativo);
+    }
 }

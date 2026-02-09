@@ -10,6 +10,7 @@ import java.util.List;
 public class PasseioCavalo {
 
     private final MovimentoListener listener;
+    private volatile boolean cancelado = false;
 
     public boolean IsFechado = false;
     public int Passos = 0;
@@ -45,6 +46,7 @@ public class PasseioCavalo {
         this.usarWarnsdorff = usarWarnsdorff;
         this.usarPrioridadeBordas = usarPrioridadeBordas;
         this.listener = listener;
+        this.cancelado = false;
 
         tabuleiro[posicaoInicial.linha][posicaoInicial.coluna] = true;
         Passos = 1;
@@ -52,11 +54,17 @@ public class PasseioCavalo {
         if(listener != null)
             listener.aoMover(posicaoInicial, false);
     }
+
+    public void cancelar() {
+        this.cancelado = true;
+    }
+
     public void setPriorizarCantos(boolean v){ this.priorizarCantos = v; }
     public void setUsarConectividade(boolean v){ this.usarConectividade = v; }
     public void setUsarSubdivisao(boolean v){ this.usarSubdivisao = v; }
 
     public boolean executaPasseio(){
+        if (cancelado) return false;
 
         Posicao posicaoAtual = pilhaCaminho.peek();
         if(posicaoAtual == null) return false;
@@ -97,6 +105,8 @@ public class PasseioCavalo {
 
 
         for(Posicao novaPosicao : proximasPosicoes){
+            if (cancelado) return false;
+
             if(posicaoValida(novaPosicao))
             {
                 if(usarConectividade && criaIsolamento(novaPosicao))
@@ -108,7 +118,9 @@ public class PasseioCavalo {
 
                 if(executaPasseio()) return true; // Retorna true se a recursão alcancou ponto de quebra
 
-                popMovimento(); // Desfaz movimento que não houve sucesso
+                if (!cancelado) {
+                    popMovimento(); // Desfaz movimento que não houve sucesso
+                }
             }
         }
 

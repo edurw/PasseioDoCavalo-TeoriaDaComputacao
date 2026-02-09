@@ -1,9 +1,11 @@
 package teoriadacomputacao.passeiodocavalo;
 
 import javafx.application.Platform;
+import javafx.scene.control.Button;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.control.Label;
+import javafx.stage.Screen;
 
 public class Logica {
     // logica dos algoritmos
@@ -11,12 +13,15 @@ public class Logica {
 
     // pra habilitar botoes depois de finalizar/resetar
     private Runnable onBuscaFinalizada;
+
     public void setOnBuscaFinalizada(Runnable r) {
         this.onBuscaFinalizada = r;
     }
-    private java.util.function.Consumer<Boolean> setBotoesBuscaAtivos;
-    public void setControleBotoes(java.util.function.Consumer<Boolean> controle) {
-        this.setBotoesBuscaAtivos = controle;
+
+    private java.util.function.Consumer<Boolean> componentSwitchState;
+    
+    public void setComponentSwitchState(java.util.function.Consumer<Boolean> controle) {
+        this.componentSwitchState = controle;
     }
 
     private final int TAM;
@@ -31,6 +36,10 @@ public class Logica {
     // posição atual do cavalo
     private int cavaloLinha = -1;
     private int cavaloColuna = -1;
+
+    // posição anterior do cavalo
+    private int cavaloLinhaAnterior = -1;
+    private int cavaloColunaAnterior = -1;
 
     // movimentos validos pro cavalo
     private final int[][] MOVIMENTOS = {
@@ -54,6 +63,7 @@ public class Logica {
     private boolean finalizado = false;
     private Thread threadExecucao;
     private boolean executando = false;
+
     public boolean isExecutando() {
         return executando;
     }
@@ -152,10 +162,11 @@ public class Logica {
         if (modo == Modo.NENHUM || executando || finalizado) return;
 
         if (cavaloLinha == -1) {
-            iniciarPasseio(linha, coluna);
-            if (setBotoesBuscaAtivos != null) {
-                setBotoesBuscaAtivos.accept(false);
+            // DESABILITA BOTÕES (quando clica no tabuleiro)
+            if (componentSwitchState != null) {
+                componentSwitchState.accept(false);
             }
+            iniciarPasseio(linha, coluna);
             executarBusca();
         }
     }
@@ -179,14 +190,17 @@ public class Logica {
 
                     javafx.application.Platform.runLater(() -> {
 
-                        if(cancelarExecucao) return;
+                        if(cancelarExecucao || finalizado) return;
 
                         if (desfazendo) { // se esta efetuando backtracking
                             estado[pos.linha][pos.coluna] = 0;
-
                             movimentosAtuais--; // profundidade diminui
                             descobertos--; // diminuir descobertos, pq esta voltando, entao nao esta mais descoberto
                             iteracoes++; // aqui aumenta iteracao, indicando que precisou fazer uma revisao nos movimentos
+
+                            // Atualizar posição anterior ao desfazer
+                            cavaloLinhaAnterior = cavaloLinha;
+                            cavaloColunaAnterior = cavaloColuna;
                         } else {
                             movimentosTotais++;
                             movimentosAtuais++;
@@ -194,9 +208,11 @@ public class Logica {
                             if(estado[pos.linha][pos.coluna] == 0)
                                 descobertos++;
 
-                            // aparentemente aqui tem um erro, usar movimentos e nao descobertos
+                            // Salvar posição anterior ANTES de atualizar atual
+                            cavaloLinhaAnterior = cavaloLinha;
+                            cavaloColunaAnterior = cavaloColuna;
+
                             estado[pos.linha][pos.coluna] = movimentosAtuais;
-//                            estado[pos.linha][pos.coluna] = descobertos;
 
                             cavaloLinha = pos.linha;
                             cavaloColuna = pos.coluna;
@@ -230,6 +246,8 @@ public class Logica {
         tempoInicio = System.nanoTime();
         cavaloLinha = linha;
         cavaloColuna = coluna;
+        cavaloLinhaAnterior = -1;
+        cavaloColunaAnterior = -1;
         inicioLinha = linha;
         inicioColuna = coluna;
 
@@ -257,8 +275,11 @@ public class Logica {
     }
 
     private void atualizarVisual() {
+        Screen screen = Screen.getPrimary();
+        double dpi = screen.getDpi();
+
         double tamanhoCasa = tamanhoTabuleiro / TAM;
-        double tamanhoCavalo = tamanhoCasa * 0.6;
+        double tamanhoCavalo = tamanhoCasa * 0.7 * dpi / 100;
 
         for (int i = 0; i < TAM; i++) {
             for (int j = 0; j < TAM; j++) {
@@ -277,12 +298,14 @@ public class Logica {
                                 "; -fx-border-color: black;"
                 );
 
-                if (estado[i][j] > 0) {
+                // Nunca mostrar número na posição atual do cavalo
+                if (estado[i][j] > 0 && (i != cavaloLinha || j != cavaloColuna)) {
                     Label passo = new Label(String.valueOf(estado[i][j]));
-                    passo.setStyle("-fx-font-weight: bold;");
+                    passo.setStyle("-fx-font-weight: bold; -fx-font-size: " + (tamanhoCasa * 0.4) + "px;");
                     casa.getChildren().add(passo);
                 }
 
+                // Mostrar cavalo na posição atual
                 if (i == cavaloLinha && j == cavaloColuna) {
                     Label cavalo = new Label("♞");
                     cavalo.setStyle("-fx-font-size: " + tamanhoCavalo + "px; -fx-text-fill: black;");
@@ -291,7 +314,7 @@ public class Logica {
             }
         }
         // aqui pra mostrar os movimentos validos do cavalo visualmente
-        if (cavaloLinha != -1) {
+        if (cavaloLinha != -1 && !finalizado) {
             mostrarMovimentosValidos(cavaloLinha, cavaloColuna);
         }
     }
@@ -342,10 +365,10 @@ public class Logica {
         }
 
         if (lblMovimentosTotais != null)
-            lblMovimentosTotais.setText("Total: " + movimentosTotais);
+            lblMovimentosTotais.setText("Movimentos totais: " + movimentosTotais);
 
         if (lblMovimentosAtuais != null)
-            lblMovimentosAtuais.setText("Atual: " + movimentosAtuais);
+            lblMovimentosAtuais.setText("Movimento Atual: " + movimentosAtuais);
 
         if (lblTempo != null)
             lblTempo.setText("Tempo: " + getTempoDecorridoMs() + " ms");
@@ -394,7 +417,31 @@ public class Logica {
         return (dl == 2 && dc == 1) || (dl == 1 && dc == 2);
     }
 
+    private void cancelarThreadAnterior() {
+        if (threadExecucao != null && threadExecucao.isAlive()) {
+            cancelarExecucao = true;
+
+            if (passeio != null) {
+                passeio.cancelar();
+            }
+
+            try {
+                // Aguarda até 2 segundos para thread terminar
+                threadExecucao.join(2000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            // Se ainda estiver viva, interrompe forçadamente
+            if (threadExecucao.isAlive()) {
+                threadExecucao.interrupt();
+            }
+        }
+    }
+
     public void reset() {
+        cancelarThreadAnterior();
+
         cancelarExecucao = true;
         executando = false;
         finalizado = false;
@@ -411,16 +458,13 @@ public class Logica {
 
     // reseta a execucao
     private void resetExecucao() {
-        cancelarExecucao = true;
+        cancelarThreadAnterior();
 
+        cancelarExecucao = true;
         executando = false;
         finalizado = false;
         tempoInicio = 0;
         iteracoes = 0;
-
-//        if (onBuscaFinalizada != null) {
-//            javafx.application.Platform.runLater(onBuscaFinalizada);
-//        }
     }
 
     // reseta o tabuleiro
@@ -428,6 +472,9 @@ public class Logica {
 
         cavaloLinha = -1;
         cavaloColuna = -1;
+
+        cavaloLinhaAnterior = -1;
+        cavaloColunaAnterior = -1;
 
         inicioLinha = -1;
         inicioColuna = -1;
@@ -452,47 +499,29 @@ public class Logica {
 
     /// algoritmos
     private void executarBusca() {
-//        private void executarForcaBruta() {
-
         executando = true;
         cancelarExecucao = false;
 
         threadExecucao = new Thread(() -> {
+            try {
+                passeio.executaPasseio();
 
-            boolean encontrou = passeio.executaPasseio();
+                // VERIFICAR SE NÃO FOI CANCELADO
+                if (!cancelarExecucao) {
+                    isFechada = passeio.IsFechado;
 
-            isFechada = passeio.IsFechado;
+                    javafx.application.Platform.runLater(this::verificarSolucao);
+                }
+            } catch (Exception e) {
+                // Log do erro para debug
+                System.err.println("Erro na execução do passeio: " + e.getMessage());
+                e.printStackTrace();
+            } finally {
+                executando = false;
 
-            javafx.application.Platform.runLater(this::verificarSolucao);
-
-            executando = false;
-
-            if (onBuscaFinalizada != null) {
-                javafx.application.Platform.runLater(onBuscaFinalizada);
-            }
-        });
-        threadExecucao.setDaemon(true);
-        threadExecucao.start();
-    }
-
-    /// PODA
-    private void executarPoda() {
-
-        executando = true;
-        cancelarExecucao = false;
-
-        threadExecucao = new Thread(() -> {
-
-            boolean encontrou = passeio.executaPasseio();
-
-            isFechada = passeio.IsFechado;
-
-            javafx.application.Platform.runLater(this::verificarSolucao);
-
-            executando = false;
-
-            if (onBuscaFinalizada != null) {
-                javafx.application.Platform.runLater(onBuscaFinalizada);
+                if (onBuscaFinalizada != null && !cancelarExecucao) {
+                    javafx.application.Platform.runLater(onBuscaFinalizada);
+                }
             }
         });
         threadExecucao.setDaemon(true);
