@@ -16,7 +16,7 @@ public class PasseioCavalo {
     public int Passos = 0;
 
 //    private boolean otimizado;
-    private boolean usarWarnsdorff;
+    private boolean otimizar;
     private boolean usarPrioridadeBordas;
     private boolean priorizarCantos;
     private boolean usarConectividade;
@@ -38,12 +38,12 @@ public class PasseioCavalo {
                     new Posicao(-2, -1), // cima-esquerda
             } ;
 
-    public PasseioCavalo(int tamanho, Posicao posicaoInicial, boolean usarWarnsdorff, boolean usarPrioridadeBordas, MovimentoListener listener) {
+    public PasseioCavalo(int tamanho, Posicao posicaoInicial, boolean otimizar, boolean usarPrioridadeBordas, MovimentoListener listener) {
         this.tamanhoTabuleiro = tamanho;
         this.tabuleiro = new boolean[tamanho][tamanho];
         this.pilhaCaminho = new ArrayDeque<Posicao>();
         this.pilhaCaminho.add(posicaoInicial);
-        this.usarWarnsdorff = usarWarnsdorff;
+        this.otimizar = otimizar;
         this.usarPrioridadeBordas = usarPrioridadeBordas;
         this.listener = listener;
         this.cancelado = false;
@@ -78,7 +78,7 @@ public class PasseioCavalo {
 
         Comparator<Posicao> comparator = null;
 
-        if (usarWarnsdorff)
+        if (otimizar)
             comparator = Comparator.comparingInt(this::contaJogadasPossiveis);
 
         if (usarPrioridadeBordas)
@@ -197,12 +197,44 @@ public class PasseioCavalo {
         void aoMover(Posicao posicao, boolean desfazendo);
     }
 
+    /**
+     * Heurística de prioridade de bordas.
+     *
+     * Objetivo:
+     * Priorizar posições mais próximas das bordas do tabuleiro,
+     * evitando que regiões periféricas fiquem inacessíveis no final
+     * do passeio.
+     *
+     * Funcionamento:
+     * As posições candidatas são ordenadas pela distância mínima até
+     * a borda do tabuleiro, dando preferência às mais próximas.
+     *
+     * Características:
+     * - Ajuda a evitar regiões isoladas.
+     * - Pode ser combinada com outras heurísticas.
+     */
     private int distanciaBorda(Posicao p) {
         int dLinha = Math.min(p.linha, tamanhoTabuleiro - 1 - p.linha);
         int dColuna = Math.min(p.coluna, tamanhoTabuleiro - 1 - p.coluna);
         return Math.min(dLinha, dColuna);
     }
 
+    /**
+     * Heurística de prioridade de cantos.
+     *
+     * Objetivo:
+     * Visitar regiões próximas aos cantos do tabuleiro mais cedo,
+     * evitando que essas casas se tornem difíceis de alcançar no
+     * final do percurso.
+     *
+     * Funcionamento:
+     * As posições candidatas são ordenadas pela distância até o canto
+     * mais próximo, priorizando as menores distâncias.
+     *
+     * Características:
+     * - Complementa a estratégia de bordas.
+     * - Reduz probabilidade de bloqueios tardios.
+     */
     private int distanciaCanto(Posicao p){
         int d1 = p.linha + p.coluna;
         int d2 = p.linha + (tamanhoTabuleiro-1 - p.coluna);
@@ -212,6 +244,23 @@ public class PasseioCavalo {
         return Math.min(Math.min(d1,d2), Math.min(d3,d4));
     }
 
+    /**
+     * Heurística de subdivisão de regiões.
+     *
+     * Objetivo:
+     * Reduzir mudanças frequentes entre regiões do tabuleiro,
+     * mantendo o cavalo explorando a mesma área antes de migrar
+     * para outras partes.
+     *
+     * Funcionamento:
+     * O tabuleiro é dividido em quadrantes. Movimentos que permanecem
+     * no mesmo quadrante atual recebem prioridade sobre movimentos
+     * que levam a outros quadrantes.
+     *
+     * Características:
+     * - Mantém a busca mais organizada espacialmente.
+     * - Pode diminuir caminhos redundantes.
+     */
     private int quadrante(Posicao p){
         int metade = tamanhoTabuleiro/2;
         int qLinha = p.linha < metade ? 0 : 1;
@@ -219,6 +268,23 @@ public class PasseioCavalo {
         return qLinha*2 + qCol;
     }
 
+    /**
+     * Heurística de conectividade (Evitar casas isoladas).
+     *
+     * Objetivo:
+     * Impedir que um movimento deixe casas restantes sem nenhuma
+     * possibilidade futura de acesso.
+     *
+     * Funcionamento:
+     * Antes de aceitar um movimento, o algoritmo simula a jogada e
+     * verifica se alguma casa livre do tabuleiro ficaria sem
+     * movimentos possíveis. Caso isso ocorra, o movimento é descartado.
+     *
+     * Características:
+     * - Reduz drasticamente falhas tardias.
+     * - Aumenta o custo de cada verificação, porém diminui o número
+     * total de caminhos explorados.
+     */
     private boolean criaIsolamento(Posicao p){
 
         tabuleiro[p.linha][p.coluna] = true;
