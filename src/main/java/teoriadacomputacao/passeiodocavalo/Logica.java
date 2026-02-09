@@ -1,7 +1,6 @@
 package teoriadacomputacao.passeiodocavalo;
 
 import javafx.application.Platform;
-import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
@@ -22,16 +21,18 @@ public class Logica {
         this.onBuscaFinalizada = r;
     }
 
+    private int INTERVALO_ATUALIZACAO_MS = 50; // Atualiza UI a cada 50ms
+    private long ultimaAtualizacaoVisual = 0;
+    private final Object lockAtualizacao = new Object();
+
     private java.util.function.Consumer<Boolean> componentSwitchState;
     
     public void setComponentSwitchState(java.util.function.Consumer<Boolean> controle) {
         this.componentSwitchState = controle;
     }
 
-    private int sleepTime = 5;
-
     public void setSleepTime(int tempo) {
-        this.sleepTime = tempo;
+        this.INTERVALO_ATUALIZACAO_MS = tempo;
     }
 
     private final int TAM;
@@ -206,18 +207,12 @@ public class Logica {
 
                     if(cancelarExecucao || finalizado) return; // caso resete, cancele o jogo
 
-                    try { Thread.sleep(sleepTime); } catch (Exception ignored) {}
-
-                    javafx.application.Platform.runLater(() -> {
-
-                        if(cancelarExecucao || finalizado) return;
-
-                        if (desfazendo) { // se esta efetuando backtracking
+                    // ATUALIZA ESTADO IMEDIATAMENTE (sem sleep)
+                    synchronized (lockAtualizacao) {
+                        if (desfazendo) {
                             estado[pos.linha][pos.coluna] = 0;
-                            movimentoAtual--; // profundidade diminui
-                            backtrackingsEfetuados++; // aqui aumenta iteracao, indicando que precisou fazer uma revisao nos movimentos
-
-                            // Atualizar posição anterior ao desfazer
+                            movimentoAtual--;
+                            backtrackingsEfetuados++;
                             cavaloLinhaAnterior = cavaloLinha;
                             cavaloColunaAnterior = cavaloColuna;
                         } else {
@@ -228,7 +223,6 @@ public class Logica {
                                 casasJaExploradas[pos.linha][pos.coluna] = true;
                             }
 
-                            // Salvar posição anterior ANTES de atualizar atual
                             cavaloLinhaAnterior = cavaloLinha;
                             cavaloColunaAnterior = cavaloColuna;
 
@@ -238,25 +232,37 @@ public class Logica {
                             cavaloColuna = pos.coluna;
                         }
 
-                        //  potencial problema na solucao, que permite o algoritmo rodar por alguns instantes
-                        if(movimentoAtual  == TAM*TAM){
-
+                        // Verifica se completou o passeio
+                        if(movimentoAtual == TAM*TAM){
                             finalizado = true;
                             executando = false;
-
-                            // evitar race condiction
                             cancelarExecucao = true;
 
-                            if (onBuscaFinalizada != null) {
-                                javafx.application.Platform.runLater(onBuscaFinalizada);
-                            }
+                            // ATUALIZAÇÃO VISUAL FINAL quando completa
+                            javafx.application.Platform.runLater(() -> {
+                                atualizarVisual();
+                                atualizarMetricas();
+                                if (onBuscaFinalizada != null) {
+                                    onBuscaFinalizada.run();
+                                }
+                            });
+                            return;
                         }
+                    }
 
-                        atualizarVisual();
-                        atualizarMetricas();
-                    });
+                    // ATUALIZA UI APENAS PERIODICAMENTE
+                    long agora = System.currentTimeMillis();
+                    if (agora - ultimaAtualizacaoVisual >= INTERVALO_ATUALIZACAO_MS) {
+                        ultimaAtualizacaoVisual = agora;
+
+                        javafx.application.Platform.runLater(() -> {
+                            if(!cancelarExecucao && !finalizado) {
+                                atualizarVisual();
+                                atualizarMetricas();
+                            }
+                        });
+                    }
                 }
-
         );
 
         passeio.setPriorizarCantos(modo == Modo.CANTOS);
@@ -279,9 +285,9 @@ public class Logica {
         atualizarMetricas();
     }
 
-    private long getTempoDecorridoMs() {
+    private double getTempoDecorridoMs() {
         if (tempoInicio == 0) return 0;
-        return (System.nanoTime() - tempoInicio) / 1_000_000;
+        return (System.nanoTime() - tempoInicio) / 1_000_000_000.0;
     }
 
     private void limparTabuleiro() {
@@ -398,7 +404,7 @@ public class Logica {
             lblMovimentoAtual.setText("Movimento Atual: " + movimentoAtual);
 
         if (lblTempo != null)
-            lblTempo.setText("Tempo: " + getTempoDecorridoMs() + " ms");
+            lblTempo.setText("Tempo: " + getTempoDecorridoMs() + " s");
 
         if (lblBacktrackingsEfetuados != null)
             lblBacktrackingsEfetuados.setText("Backtrackings: " + backtrackingsEfetuados);
@@ -539,7 +545,13 @@ public class Logica {
                 if (!cancelarExecucao) {
                     isFechada = passeio.IsFechado;
 
-                    javafx.application.Platform.runLater(this::verificarSolucao);
+                    javafx.application.Platform.runLater(() -> {
+                        if(!cancelarExecucao) {
+                            atualizarVisual();
+                            atualizarMetricas();
+                            verificarSolucao();
+                        }
+                    });
                 }
             } catch (Exception e) {
                 // Log do erro para debug

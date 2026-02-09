@@ -58,7 +58,7 @@ public class TabuleiroCavalo extends Application {
         Button btnForcaBruta = new Button("Força Bruta");
         btnForcaBruta.setMaxWidth(Double.MAX_VALUE);
 
-        Button btnPoda = new Button("Warnsdorff");
+        Button btnPoda = new Button("Melhor Possibilidade");
         btnPoda.setMaxWidth(Double.MAX_VALUE);
 
         Button btnPodaBordas = new Button("Poda de Bordas");
